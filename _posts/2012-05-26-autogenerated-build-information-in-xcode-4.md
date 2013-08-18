@@ -10,6 +10,7 @@ tags:
 status: publish
 type: post
 published: true
+excerpt:
 ---
 In the Xcode project settings there are "Version" and "Build" fields for each target. These are the `CFBundleShortVersionString` and `CFBundleVersion` fields respectively in the info plist. The Version field is the version identifier presented to the user, and is the one Apple cares about when submitting an app to the App Store. It should use a readable scheme like major.minor.micro, e.g. 1.0.2.
 

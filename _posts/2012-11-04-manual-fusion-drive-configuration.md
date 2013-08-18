@@ -10,6 +10,7 @@ tags:
 status: publish
 type: post
 published: true
+excerpt: Apple is now selling Macs with a feature called Fusion Drive, which merges a SSD and a HDD and keeps your most used files on the SSD. This sounds a lot like tiering in enterprise storage solutions, and indeed it is. It turns out this is a built-in feature of CoreStorage (Apple's logical volume manager), and that means we can configure this setup on any Mac that runs OS X with Fusion Drive support (10.8.2 and onward guaranteed).
 ---
 Apple is now selling Macs with a feature called Fusion Drive, which merges a SSD and a HDD and keeps your most used files on the SSD. This sounds a lot like tiering in enterprise storage solutions, [and indeed it is](http://arstechnica.com/apple/2012/10/more-on-fusion-drive-how-it-works-and-how-to-roll-your-own/). It turns out this is a built-in feature of CoreStorage (Apple's logical volume manager), and that means we can configure this setup on any Mac that runs OS X with Fusion Drive support (10.8.2 and onward guaranteed). I tried this successfully on my iMac with an Intel 520 120 GB SSD and a factory installed 1 TB HDD. I based my test on [the excellent work](http://jollyjinx.tumblr.com/post/34638496292/fusion-drive-on-older-macs-yes-since-apple-has) done by [Patrick Stein aka jollyjinx](http://jollyjinx.tumblr.com/). This is what I did:
 

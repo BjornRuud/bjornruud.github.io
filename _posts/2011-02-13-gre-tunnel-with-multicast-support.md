@@ -10,6 +10,7 @@ tags:
 status: publish
 type: post
 published: true
+excerpt: Generic Routing Encapsulation (GRE) is a tunneling protocol developed by Cisco and is widely used for IP-to-IP tunneling. Since it can encapsulate all kinds of IP traffic, GRE can be used to transport multicast traffic over networks that have no multicast support.
 ---
 (Note: This article was originally posted on my old Wikidot site on 2009-10-17)
 

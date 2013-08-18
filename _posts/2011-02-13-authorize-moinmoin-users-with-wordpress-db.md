@@ -11,6 +11,7 @@ tags:
 status: publish
 type: post
 published: true
+excerpt: In order to authorize MoinMoin wiki users with a WordPress user database, MoinMoin needs a custom authorization plugin. Two packages are required for it to work: MySQLdb for MySQL support, and the PHPass Python module for bcrypt password hash support so we can compare stored and given password.
 ---
 (Note: This article was originally posted on my old [Wikidot](http://www.wikidot.com/) site on 2009-10-17)
 

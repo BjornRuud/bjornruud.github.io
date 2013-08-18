@@ -11,6 +11,7 @@ tags:
 status: publish
 type: post
 published: true
+excerpt: Mac OS X comes with FileVault, so why use EncFS instead? Well, FileVault has a few drawbacks. Personally I also like that with EncFS the encrypted files are stored in the filesystem as normal, you get the ability to use different encryption on different parts of the filesystem, and backup is straightforward.
 ---
 Note: With OS X 10.8 my [original post](/2011/02/encrypt-directories-with-encfs-on-mac-os-x.html) about using encfs has become slightly dated. This is a revised version of that post.
 

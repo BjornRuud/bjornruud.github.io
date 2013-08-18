@@ -10,6 +10,7 @@ tags:
 status: publish
 type: post
 published: true
+excerpt: wget is often used to download single files from the command line, but it can also mirror a website locally or just download part of a website. By specifying the right parameters we can make wget act as batch downloader, retrieving only the files we want.
 ---
 (Note: This article was originally posted on my old [Wikidot](http://www.wikidot.com/) site on 2009-10-17)
 
