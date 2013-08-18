@@ -1,0 +1,16 @@
+---
+layout: default
+---
+
+<div class="pure-g-r">
+  <div class="pure-u-1">
+    <article>
+      <span class="date">{{ page.date | date: "%Y-%m-%d" }}</span><br />
+      <a class="title" href="{{ post.url }}">{{ page.title }}</a>
+
+      <div class="post">
+        {{ content }}
+      </div>
+    </article>
+  </div>
+</div>

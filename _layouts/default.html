@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>
+    {% if page.title %}
+    {{ page.title }} | {{ site.name }}
+    {% else %}
+    {{ site.name }}
+    {% endif %}
+  </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- CSS -->
+  <link href="/css/pure/pure-min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/syntax-solarized-light.css">
+</head>
+
+<body>
+  <div class="site">
+    <div class="header">
+      <div class="header-content">
+        <a class="header-title" href="/">{{ site.name }}</a>
+      </div>
+    </div><!-- /header -->
+
+    <div class="content">
+      {{ content }}
+    </div><!-- /content -->
+
+    <div class="footer">
+      <div class="footer-content">
+        {{ site.name }} &copy; {{ site.time | date: "%Y" }}<br />
+        Built with <a href="http://jekyllrb.com/" target="_blank">Jekyll</a> +
+        <a href="http://purecss.io/" target="_blank">Pure</a>
+      </div>
+    </div><!-- /footer -->
+  </div><!-- /site -->
+</body>
+</html>

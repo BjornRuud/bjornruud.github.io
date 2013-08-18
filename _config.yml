@@ -1,0 +1,4 @@
+markdown: redcarpet
+name: Bjørn Olav Ruud
+permalink: /:year/:month/:title.html
+pygments: true
