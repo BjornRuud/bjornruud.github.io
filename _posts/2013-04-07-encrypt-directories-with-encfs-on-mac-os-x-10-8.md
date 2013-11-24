@@ -20,6 +20,15 @@ Mac OS X comes with FileVault, so why use EncFS instead? Well, FileVault has a f
 
 ## Requirements
 
+*Update 2013-11-24:*  
+The installation method described in this post doesn't work with OS X 10.9 and Xcode 5. Fortunately an easy solution is to install everything with [Homebrew](http://brew.sh/) as described in [this blog post](http://www.mulle-kybernetik.com/weblog/2013/11/osx-109-brew-osxfuse-encfs-mac.html):
+
+```
+brew install osxfuse
+brew install https://gist.github.com/defunctzombie/7324625/raw/8c791a397767b7f9e7f725e49a45151885e3c1cb/encfs.rb
+```
+
+*Previous method:*  
 [EncFS](http://www.arg0.net/encfs) requires FUSE so download and install [OSXFuse](http://osxfuse.github.io/) (MacFuse successor). Now we must get EncFS itself, but finding a build compatible with OSXFuse isn't easy. Using [Homebrew](http://mxcl.github.io/homebrew/) would be preferable, but the Homebrew encfs package relies on fuse4x which is the predecessor of OSXFuse. Thankfully Patrick Stein has created a Homebrew formula, [encfsmacosxfuse.rb](https://github.com/jollyjinx/encfs.macosx), that compiles encfs against OSXFuse.
 
 ```
