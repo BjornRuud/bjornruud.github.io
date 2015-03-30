@@ -1,5 +1,5 @@
 markdown: redcarpet
 name: Bjørn Olav Ruud
 permalink: /:year/:month/:title.html
-pygments: true
+highlighter: pygments
 url: http://bjornruud.net
