@@ -182,7 +182,7 @@ Create similar scripts on `Site2`'s router and you're all set.
 
 ## References
 
-[Linux Advanced Routing & Traffic Control](http://lartc.org/howto/lartc.tunnel.gre.html)  
+[Linux Advanced Routing & Traffic Control](https://web.archive.org/web/20180129185606/http://lartc.org/howto/lartc.tunnel.gre.html)  
 [Generic Routing Encapsulation on Wikipedia](http://en.wikipedia.org/wiki/Generic_Routing_Encapsulation)  
 [Guide to IP Layer Network Administration with Linux](http://linux-ip.net/)  
 [iproute2](http://www.linuxfoundation.org/en/Net:Iproute2)
