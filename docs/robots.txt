@@ -1,0 +1,2 @@
+User-agent: *
+Sitemap: https://bjornruud.net/sitemap.xml

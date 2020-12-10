@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  {% block head %}
+  {% include "head.html" %}
+  {% endblock head %}
+</head>
+
+<body>
+  <div class="flex-container">
+    <div class="header-container">
+      <div class="header">
+        {% block header %}
+        {% include "header.html" %}
+        {% endblock header %}
+      </div>
+    </div>
+
+    <div class="content-container">
+      <div class="content">
+        {% block content %}
+        {% include "page-list.html" %}
+        {% endblock content %}
+      </div>
+    </div>
+
+    <div class="footer-container">
+      <div class="footer">
+        {% block footer %}
+        {% include "footer.html" %}
+        {% endblock footer %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,177 @@
+@use '/css/normalize.css';
+
+$headerBackgroundColor: #181818;
+$headerTextColor: #ffcc66;
+
+$bodyBackgroundColor: #2d2d2d;
+$bodyTextColor: #f2f0ec;
+
+$dateTextColor: #d3d0c8;
+$headingColor: #f99157;
+$headingVisitedColor: #f2777a;
+
+$linkColor: #99cc99;
+$linkVisitedColor: #66cccc;
+
+$footerBackgroundColor: $headerBackgroundColor;
+$footerTextColor: $bodyTextColor;
+
+$maxWidth: 960px;
+
+/* Common */
+
+body {
+  background-color: $bodyBackgroundColor;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+}
+
+a:link {
+  color: $linkColor;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+a:visited {
+  color: $linkVisitedColor;
+  text-decoration: none;
+}
+
+/* Site */
+
+.flex-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+body {
+  color: $bodyTextColor;
+  line-height: 1.4em;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  width: 100%;
+}
+
+.date {
+  color: $dateTextColor;
+  font-size: small;
+}
+
+h1, h2, h3 {
+  color: $headingColor;
+  line-height: 1.1em;
+  margin: 0;
+}
+
+p code {
+  word-break: break-word;
+}
+
+pre code {
+  display: block;
+  overflow-x: auto;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.header-container {
+  background-color: $headerBackgroundColor;
+  width: 100%;
+}
+
+.header {
+  margin: auto;
+  padding: 1.2em;
+  max-width: $maxWidth;
+  text-align: left;
+
+  a {
+    color: $headerTextColor;
+    font-weight: bold;
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: $headerTextColor;
+  }
+
+  .header-title {
+    font-size: 1.7em;
+    margin-bottom: 0.2em;
+  }
+
+  .header-subtitle {
+    font-size: 1.1em;
+  }
+}
+
+.content-container {
+  width: 100%;
+}
+
+.content {
+  margin: auto;
+  padding: 1.2em;
+  max-width: $maxWidth;
+  text-align: left;
+
+  .date {
+    margin-bottom: 0.2em;
+  }
+
+  h2, h3 {
+    margin-top: 1.2em;
+  }
+}
+
+.footer-container {
+  background-color: $footerBackgroundColor;
+  width: 100%;
+}
+
+.footer {
+  color: $footerTextColor;
+  font-size: 80%;
+  margin: auto;
+  padding: 1.2em;
+  max-width: $maxWidth;
+  text-align: left;
+}
+
+.page-list-item {
+  margin-bottom: 1.0em;
+
+  .title {
+    font-size: 140%;
+  }
+
+  a:link {
+    color: $headingColor;
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  a:visited {
+    color: $headingVisitedColor;
+    text-decoration: none;
+  }
+}
+
+.archive-list {
+  .year {
+    color: $headingColor;
+    margin-top: 0;
+  }
+}

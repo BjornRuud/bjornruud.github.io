@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<!-- Enable responsiveness on mobile devices-->
+<!-- viewport-fit=cover is to support iPhone X rounded corners and notch in landscape-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+
+<title>bjornruud.net</title>
+
+<link rel="stylesheet" href="https://bjornruud.net/print.css" media="print">
+<link rel="stylesheet" href="https://bjornruud.net/main.css">
+
+
+<link rel="alternate" type="application/rss+xml" title="RSS" href="https://bjornruud.net/rss.xml">
+
+
+  
+</head>
+
+<body>
+  <div class="flex-container">
+    <div class="header-container">
+      <div class="header">
+        
+        <div class="header-title">
+  <a href="/">bjornruud.net</a>
+</div>
+<div class="header-subtitle">
+  <a href="https://bjornruud.net/rss.xml">rss</a> |
+  <a href="/blog/archive/">archive</a>
+</div>
+
+        
+      </div>
+    </div>
+
+    <div class="content-container">
+      <div class="content">
+        
+<article>
+  <div class="date">2013-04-07</div>
+  <div class="post">
+    <h1 id="encrypt-directories-with-encfs-on-mac-os-x-10-8">Encrypt Directories With EncFS on Mac OS X 10.8</h1>
+<p>Note: With OS X 10.8 my <a href="/2011/02/encrypt-directories-with-encfs-on-mac-os-x.html">original post</a> about using encfs has become slightly dated. This is a revised version of that post.</p>
+<p>Mac OS X comes with FileVault, so why use EncFS instead? Well, FileVault has a few drawbacks that are <a href="http://techieblurbs.blogspot.com/2010/02/howto-replace-filevault-with-encfs.html">summed up here</a>. Personally I also like that with EncFS the encrypted files are stored in the filesystem as normal, you get the ability to use different encryption on different parts of the filesystem, and backup is straightforward.</p>
+<h2 id="requirements">Requirements</h2>
+<p><em>Update 2013-11-24:</em>
+The installation method described in this post doesn't work with OS X 10.9 and Xcode 5. Fortunately an easy solution is to install everything with <a href="http://brew.sh/">Homebrew</a> as described in <a href="http://www.mulle-kybernetik.com/weblog/2013/11/osx-109-brew-osxfuse-encfs-mac.html">this blog post</a>:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">brew install osxfuse</span><span style="color:#dcdcdc;">
+brew install https://gist.github.com/defunctzombie/7324625/raw/8c791a397767b7f9e7f725e49a45151885e3c1cb/encfs.rb</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p><em>Previous method:</em>
+<a href="http://www.arg0.net/encfs">EncFS</a> requires FUSE so download and install <a href="http://osxfuse.github.io/">OSXFuse</a> (MacFuse successor). Now we must get EncFS itself, but finding a build compatible with OSXFuse isn't easy. Using <a href="http://mxcl.github.io/homebrew/">Homebrew</a> would be preferable, but the Homebrew encfs package relies on fuse4x which is the predecessor of OSXFuse. Thankfully Patrick Stein has created a Homebrew formula, <a href="https://github.com/jollyjinx/encfs.macosx">encfsmacosxfuse.rb</a>, that compiles encfs against OSXFuse.</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">brew install https://github.com/jollyjinx/encfs.macosx/raw/master/encfsmacosxfuse.rb</span><span style="color:#dcdcdc;">
+</span></code></pre><h2 id="goal">Goal</h2>
+<p>The goal is to mount encrypted directories on login and unmount them on logout. The whole process should be completely transparent to the user and there are several ways to achieve this. One of them is to use login/logout hooks as documented <a href="http://techieblurbs.blogspot.com/2010/02/howto-replace-filevault-with-encfs.html">here</a>.</p>
+<p>That is a nice solution, but in order for the keychain password to be accessible when the hook processes execute it must be placed in a public keychain. The reason is that the user's private keychain isn't unlocked yet at that point. I wanted a solution where the password was administered by the user and stored in his private keychain. I also wanted any scripts to be stored and executed in userspace.</p>
+<h2 id="solution">Solution</h2>
+<p>First we create the encrypted directory. Make a directory where the encrypted files will be stored, and one which will be the mount point in which the decrypted versions of the files will appear. Then run the <code>encfs</code> command and follow the instructions.</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">cd</span><span style="color:#dcdcdc;">
+mkdir -p .encrypted/Vault</span><span style="color:#dcdcdc;">
+mkdir -p Documents/Vault</span><span style="color:#dcdcdc;">
+encfs ~/.encrypted/Vault ~/Documents/Vault</span><span style="color:#dcdcdc;">
+... follow instructions ...</span><span style="color:#dcdcdc;">
+... check that encryption works ...</span><span style="color:#dcdcdc;">
+umount Documents/Vault</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>To solve the login/logout problem I created a script which handles both. It executes upon login and mounts the encrypted directories with a password from the user's keychain. The script then goes to sleep. When the user logs out the sleeping script gets a SIGTERM (15) signal which is intercepted. The script then unmounts the encrypted directories, performs cleanup, and exits.</p>
+<p>Here is the script which I put in <code>~/bin/encfsd.sh</code>:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#608b4e;">#!/bin/bash</span><span style="color:#608b4e;">
+</span><span style="color:#dcdcdc;">
+ENCFS=</span><span style="background-color:#282828;color:#d69d85;">&quot;/path/to/encfs&quot;</span><span style="color:#dcdcdc;">
+ENCDIR=</span><span style="background-color:#282828;color:#d69d85;">&quot;$</span><span style="background-color:#282828;color:#dcdcdc;">HOME</span><span style="background-color:#282828;color:#d69d85;">/.encrypted/Vault&quot;</span><span style="color:#dcdcdc;">
+DECDIR=</span><span style="background-color:#282828;color:#d69d85;">&quot;$</span><span style="background-color:#282828;color:#dcdcdc;">HOME</span><span style="background-color:#282828;color:#d69d85;">/Documents/Vault&quot;</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+</span><span style="color:#569cd6;">function </span><span style="color:#dcdcdc;">cleanup {</span><span style="color:#dcdcdc;">
+    </span><span style="color:#608b4e;"># Kill sleep command ($! is PID of last command launched in background)</span><span style="color:#608b4e;">
+    </span><span style="color:#dcdcdc;">kill $!</span><span style="color:#dcdcdc;">
+    umount </span><span style="color:#d69d85;">&quot;$</span><span style="color:#dcdcdc;">DECDIR</span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">
+    exit</span><span style="color:#dcdcdc;">
+}</span><span style="color:#dcdcdc;">
+trap cleanup 1 2 3 6 15</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+security find-generic-password -gs EncFS </span><span style="color:#b5cea8;">2</span><span style="color:#dcdcdc;">&gt;&amp;</span><span style="color:#b5cea8;">1 </span><span style="color:#dcdcdc;">&gt;/dev/null \</span><span style="color:#dcdcdc;">
+  </span><span style="color:#569cd6;">| </span><span style="color:#dcdcdc;">cut -d</span><span style="color:#d69d85;">&#39;&quot;&#39;</span><span style="color:#dcdcdc;"> -f2 \</span><span style="color:#dcdcdc;">
+  </span><span style="color:#569cd6;">| </span><span style="color:#d69d85;">&quot;$</span><span style="color:#dcdcdc;">ENCFS</span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;"> -S </span><span style="color:#d69d85;">&quot;$</span><span style="color:#dcdcdc;">ENCDIR</span><span style="color:#d69d85;">&quot; &quot;$</span><span style="color:#dcdcdc;">DECDIR</span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+</span><span style="color:#608b4e;"># Wait for exit</span><span style="color:#608b4e;">
+</span><span style="color:#569cd6;">while </span><span style="color:#dcdcdc;">true</span><span style="color:#569cd6;">; do</span><span style="color:#dcdcdc;">
+    </span><span style="color:#608b4e;"># Sleeping ignores normal signals so start it in a subprocess and wait for it</span><span style="color:#608b4e;">
+    </span><span style="color:#dcdcdc;">sleep 3600 </span><span style="color:#569cd6;">&amp;</span><span style="color:#dcdcdc;">
+    wait</span><span style="color:#dcdcdc;">
+</span><span style="color:#569cd6;">done</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>The cleanup function is called when the script gets signalled to terminate. It kills the sleep process running in the background, unmounts the encrypted directory, and exits.</p>
+<p>After the function body is the trap command which tells the script to call the cleanup function when it receives signal 1, 2, 3, 6 or 15. The last signal, 15, is the default quit signal SIGTERM (check <code>man signal</code> for the rest).</p>
+<p>Next comes the <code>security</code> command which retrieves the password from the user's keychain. The redirect is necessary since the password is printed to stderr. The output with the password is then sent to the cut command where the password is isolated. It is then sent as input to the <code>encfs</code> command.</p>
+<p>After that the script goes to sleep.</p>
+<p>To automatically start the script on login it is installed as a Launch Agent. Here are the contents of my <code>~/Library/LaunchAgents/localhost.encfsd.plist</code>:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#808080;">&lt;?</span><span style="color:#569cd6;">xml </span><span style="color:#92caf4;">version</span><span style="color:#808080;">=</span><span style="color:#c8c8c8;">&quot;1.0&quot; </span><span style="color:#92caf4;">encoding</span><span style="color:#808080;">=</span><span style="color:#c8c8c8;">&quot;UTF-8&quot;</span><span style="color:#808080;">?&gt;</span><span style="color:#dcdcdc;">
+</span><span style="color:#808080;">&lt;!</span><span style="color:#569cd6;">DOCTYPE </span><span style="color:#dcdcdc;">plist </span><span style="color:#569cd6;">PUBLIC </span><span style="color:#c8c8c8;">&quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+</span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">plist </span><span style="color:#92caf4;">version</span><span style="color:#808080;">=</span><span style="color:#c8c8c8;">&quot;1.0&quot;</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+</span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">dict</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">key</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">Label</span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">key</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">string</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">localhost.encfsd</span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">string</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">key</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">ProgramArguments</span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">key</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">array</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+    </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">string</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">/Users/boru/bin/encfsd.sh</span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">string</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">array</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">key</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">KeepAlive</span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">key</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">true</span><span style="color:#808080;">/&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">key</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">RunAtLoad</span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">key</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;</span><span style="color:#569cd6;">true</span><span style="color:#808080;">/&gt;</span><span style="color:#dcdcdc;">
+  </span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">dict</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+</span><span style="color:#808080;">&lt;/</span><span style="color:#569cd6;">plist</span><span style="color:#808080;">&gt;</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>It basically says the system should run the <code>encfsd.sh</code> script once and run when the agent loads.</p>
+<p>With the scripts in place the user should now have automatic mount of encrypted directories on login, and they should unmount on logout.</p>
+
+  </div>
+</article>
+
+      </div>
+    </div>
+
+    <div class="footer-container">
+      <div class="footer">
+        
+        Bjørn Olav Ruud &copy; 2021<br/>
+<a href="https://github.com/BjornRuud">GitHub</a> | <a href="https://www.linkedin.com/in/bjornruud/">LinkedIn</a> | <a href="https://twitter.com/BjornRuud">Twitter</a><br/>
+Built with <a href="https://www.getzola.org" target="_blank">Zola</a>
+
+        
+      </div>
+    </div>
+  </div>
+</body>
+</html>

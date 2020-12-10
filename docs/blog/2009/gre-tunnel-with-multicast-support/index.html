@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<!-- Enable responsiveness on mobile devices-->
+<!-- viewport-fit=cover is to support iPhone X rounded corners and notch in landscape-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+
+<title>bjornruud.net</title>
+
+<link rel="stylesheet" href="https://bjornruud.net/print.css" media="print">
+<link rel="stylesheet" href="https://bjornruud.net/main.css">
+
+
+<link rel="alternate" type="application/rss+xml" title="RSS" href="https://bjornruud.net/rss.xml">
+
+
+  
+</head>
+
+<body>
+  <div class="flex-container">
+    <div class="header-container">
+      <div class="header">
+        
+        <div class="header-title">
+  <a href="/">bjornruud.net</a>
+</div>
+<div class="header-subtitle">
+  <a href="https://bjornruud.net/rss.xml">rss</a> |
+  <a href="/blog/archive/">archive</a>
+</div>
+
+        
+      </div>
+    </div>
+
+    <div class="content-container">
+      <div class="content">
+        
+<article>
+  <div class="date">2009-10-17</div>
+  <div class="post">
+    <p>Generic Routing Encapsulation (GRE) is a tunneling protocol developed by Cisco and is widely used for IP-to-IP tunneling. Since it can encapsulate all kinds of IP traffic, GRE can be used to transport multicast traffic over networks that have no multicast support.</p>
+<p>Please note that Ubuntu Server was used as the basis for this article. Debian based Linux distributions will probably work with little to no modification, but other distributions might require more work or a different configuration.</p>
+<h2 id="configuration">Configuration</h2>
+<p><em>Tip:</em> On Linux the <code>ip_gre</code> module is needed. Add it to <code>/etc/modules</code> to load it at boot time.</p>
+<p>Consider a scenario where we have two networks, <code>Site1</code> and <code>Site2</code>, and both are connected to the internet. The network owners want to send multicast traffic between the two networks, which is not supported by the network between them.</p>
+<p><img src="https://bjornruud.net/blog/2009/gre-tunnel-with-multicast-support/gre-sites.png" alt="Example GRE sites" title="gre-sites" /></p>
+<p>The site networks have the following configuration:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">Site1</span><span style="color:#dcdcdc;">
+network 10.0.1.0</span><span style="color:#dcdcdc;">
+netmask 255.255.255.0</span><span style="color:#dcdcdc;">
+router  10.0.1.1</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+Site2</span><span style="color:#dcdcdc;">
+network 10.0.2.0</span><span style="color:#dcdcdc;">
+netmask 255.255.255.0</span><span style="color:#dcdcdc;">
+router  10.0.2.1</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>The routers are assumed to be Linux boxes with a GRE tunnel configuration on each one. Tunnel devices are created using the ip command. These network devices behave as network interfaces. The following commands will create the tunnel interface for <code>Site1</code>:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">ip tunnel add gre-site2 mode gre remote 10.0.2.1 local 10.0.1.1 ttl 255</span><span style="color:#dcdcdc;">
+ip link set gre-site2 up</span><span style="color:#dcdcdc;">
+ip link set gre-site2 multicast on</span><span style="color:#dcdcdc;">
+ip addr add 10.10.0.1/30 broadcast 10.10.0.3 dev gre-site2</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p><em>Tip:</em> The <code>ip</code> command is found in the <code>iproute</code> (or <code>iproute2</code>) package.</p>
+<p>The first command line creates the tunnel interface. A tunnel is defined by its endpoints, so we have a remote (destination) IP address and a local (source) IP address. The TTL is set to maximum since we don't know the structure of the underlying network used by the tunnel.</p>
+<p>Command lines two and three brings the interface up to an active state and enables multicast on it. Your multicasting routing daemon of choice might not automatically be aware of new multicast capable interfaces, so remember to do any necessary actions or configuration changes to make it register the new interface.</p>
+<p>Command line four adds an IP address to the GRE interface so that we can address it as part of our network. We have chosen a <code>/30</code> network since a tunnel only needs two IP adresses.</p>
+<p><code>Site2</code> is configured the same way:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">ip tunnel add gre-site1 mode gre remote 10.0.1.1 local 10.0.2.1 ttl 255</span><span style="color:#dcdcdc;">
+ip link set gre-site1 up</span><span style="color:#dcdcdc;">
+ip link set gre-site1 multicast on</span><span style="color:#dcdcdc;">
+ip addr add 10.10.0.2/30 broadcast 10.10.0.3 dev gre-site1</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>The tunnel should now be functional. Try to ping the endpoint addresses from the routers. If there is no contact, see if the routing table contains the correct entry for the <code>10.10.0.0/30</code> network.</p>
+<p><img src="https://bjornruud.net/blog/2009/gre-tunnel-with-multicast-support/gre-sites-tunnel.png" alt="GRE tunnel diagram" title="gre-sites-tunnel" /></p>
+<p>To get traffic through the tunnel you must define a route to the appropriate network. To get traffic from <code>Site1</code> to <code>Site2</code>, <code>Site1</code> must know that the <code>Site2</code> network is accessed through the tunnel:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">ip route add 10.0.2.0/24 via 10.10.0.2</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>This makes all packets destined for the <code>Site2</code> network <code>10.0.2.0/24</code> be routed to the other end of the tunnel (<code>10.10.0.2</code> as seen from <code>Site1</code>). If all traffic is supposed to go there just replace the default route:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">ip route replace default via 10.10.0.2</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p><code>Site2</code> will of course need a similar configuration for packets to get to the <code>Site1</code> network.</p>
+<h2 id="adjusting-mss">Adjusting MSS</h2>
+<p>Since a GRE packet reserves some space for its header, the total amount of space available for the payload is less than the typical maximum TCP packet size. Consequently, if PMTUD fails then packets that can't be fragmented will not get through the tunnel. A typical symptom of this happening is when web browsing over the tunnel fails but some other types of traffic works (like ping with small packets). One solution to this is to clamp MSS to PMTU using iptables, ensuring that all packets stay below the tunnel packet size limit. Let's do this on <code>Site2</code> in our scenario:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">iptables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN \</span><span style="color:#dcdcdc;">
+         -o gre-site1 -j TCPMSS --clamp-mss-to-pmtu</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>Let's take a look at the options.</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">-t mangle</span><span style="color:#dcdcdc;">
+    Indicates we are using the mangle table to alter a packet in some way.</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+-A POSTROUTING</span><span style="color:#dcdcdc;">
+    Means the mangling is done after the routing stage. We only want to</span><span style="color:#dcdcdc;">
+    affect packets going to a specific interface.</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+-p tcp</span><span style="color:#dcdcdc;">
+    Defines which protocol to look for.</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+--tcp-flags</span><span style="color:#dcdcdc;">
+    Sets the TCP flags to look for, and which of them have to be set.</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+-o gre-site1</span><span style="color:#dcdcdc;">
+    Sets the output interface for the packet.</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+-j TCPMSS</span><span style="color:#dcdcdc;">
+    Defines which iptable target to jump to if the packet matches. TCPMSS</span><span style="color:#dcdcdc;">
+    allows us to alter the MSS value of TCP SYN packets (see iptables man</span><span style="color:#dcdcdc;">
+    page for details).</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+--clamp-mss-to-pmtu</span><span style="color:#dcdcdc;">
+    Tells iptables to automatically set the new MSS to PMTU - 40.</span><span style="color:#dcdcdc;">
+</span></code></pre><h2 id="network-scripts">Network Scripts</h2>
+<p>Everything done so far in our scenario has been done manually. Typing all of it every time the server reboots or an interface goes down is out of the question, so it's time to look at how we can automate it. There are many ways that can be done, but the following is the author's preference and should serve well as an example.</p>
+<p>A GRE tunnel is clearly dependent on another network interface to exist, either physical or virtual. This tells us the configuration should be tied to the interface the tunnel uses, and using custom network interface scripts lets us make that connection. Assuming the <code>Site1</code> router uses <code>eth1</code> to connect to the internet, we can configure <code>/etc/network/interfaces</code> like this:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">iface eth1 inet static</span><span style="color:#dcdcdc;">
+  address 10.0.1.1</span><span style="color:#dcdcdc;">
+  netmask 255.255.255.0</span><span style="color:#dcdcdc;">
+  network 10.0.1.0</span><span style="color:#dcdcdc;">
+  broadcast 10.0.1.255</span><span style="color:#dcdcdc;">
+  post-up /etc/network/custom/eth1-post-up</span><span style="color:#dcdcdc;">
+  pre-down /etc/network/custom/eth1-pre-down</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>Now we must create the <code>/etc/network/custom</code> directory and put in it the file <code>eth1-post-up</code> containing something like this:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#608b4e;"># eth1 post-up dependencies</span><span style="color:#608b4e;">
+</span><span style="color:#dcdcdc;">
+IPCMD=</span><span style="background-color:#282828;color:#d69d85;">&quot;/sbin/ip&quot;</span><span style="color:#dcdcdc;">
+IPTABLES=</span><span style="background-color:#282828;color:#d69d85;">&quot;/sbin/iptables&quot;</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+</span><span style="color:#608b4e;"># GRE tunnel to Site2</span><span style="color:#608b4e;">
+</span><span style="color:#dcdcdc;">GREINT=</span><span style="background-color:#282828;color:#d69d85;">&quot;gre-site2&quot;</span><span style="color:#dcdcdc;">
+$IPCMD tunnel add $GREINT mode gre remote 10.0.2.1 local 10.0.1.1 ttl 255</span><span style="color:#dcdcdc;">
+$IPCMD link set $GREINT up</span><span style="color:#dcdcdc;">
+$IPCMD link set $GREINT multicast on</span><span style="color:#dcdcdc;">
+$IPCMD addr add 10.10.0.1/30 broadcast 10.10.0.3 dev $GREINT</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+</span><span style="color:#608b4e;"># Make sure the right MTU is used through the tunnel</span><span style="color:#608b4e;">
+</span><span style="color:#dcdcdc;">$IPTABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN \</span><span style="color:#dcdcdc;">
+  -o $GREINT -j TCPMSS --clamp-mss-to-pmtu</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+</span><span style="color:#608b4e;"># Add a route to the Site2 network</span><span style="color:#608b4e;">
+</span><span style="color:#dcdcdc;">$IPCMD route add 10.0.2.0/24 via 10.10.0.2</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>The <code>eth1-pre-down</code> file acts as a cleanup script for when <code>eth1</code> is taken down:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#608b4e;"># eth1 pre-down dependencies</span><span style="color:#608b4e;">
+</span><span style="color:#dcdcdc;">
+IPCMD=</span><span style="background-color:#282828;color:#d69d85;">&quot;/sbin/ip&quot;</span><span style="color:#dcdcdc;">
+IPTABLES=</span><span style="background-color:#282828;color:#d69d85;">&quot;/sbin/iptables&quot;</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+GREINT=</span><span style="background-color:#282828;color:#d69d85;">&quot;gre-site2&quot;</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+</span><span style="color:#608b4e;"># Clean up iptables MTU correction for GRE tunnel</span><span style="color:#608b4e;">
+</span><span style="color:#dcdcdc;">$IPTABLES -t mangle -D POSTROUTING -p tcp --tcp-flags SYN,RST SYN \</span><span style="color:#dcdcdc;">
+  -o $GREINT -j TCPMSS --clamp-mss-to-pmtu</span><span style="color:#dcdcdc;">
+</span><span style="color:#dcdcdc;">
+</span><span style="color:#608b4e;"># Take down GRE tunnel</span><span style="color:#608b4e;">
+</span><span style="color:#dcdcdc;">$IPCMD link set $GREINT down</span><span style="color:#dcdcdc;">
+$IPCMD tunnel del $GREINT</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>Create similar scripts on <code>Site2</code>'s router and you're all set.</p>
+<h2 id="references">References</h2>
+<p><a href="https://web.archive.org/web/20180129185606/http://lartc.org/howto/lartc.tunnel.gre.html">Linux Advanced Routing &amp; Traffic Control</a></p>
+<p><a href="http://en.wikipedia.org/wiki/Generic_Routing_Encapsulation">Generic Routing Encapsulation on Wikipedia</a></p>
+<p><a href="http://linux-ip.net/">Guide to IP Layer Network Administration with Linux</a></p>
+<p><a href="http://www.linuxfoundation.org/en/Net:Iproute2">iproute2</a></p>
+
+  </div>
+</article>
+
+      </div>
+    </div>
+
+    <div class="footer-container">
+      <div class="footer">
+        
+        Bjørn Olav Ruud &copy; 2021<br/>
+<a href="https://github.com/BjornRuud">GitHub</a> | <a href="https://www.linkedin.com/in/bjornruud/">LinkedIn</a> | <a href="https://twitter.com/BjornRuud">Twitter</a><br/>
+Built with <a href="https://www.getzola.org" target="_blank">Zola</a>
+
+        
+      </div>
+    </div>
+  </div>
+</body>
+</html>

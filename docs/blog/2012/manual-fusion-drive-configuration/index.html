@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<!-- Enable responsiveness on mobile devices-->
+<!-- viewport-fit=cover is to support iPhone X rounded corners and notch in landscape-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+
+<title>bjornruud.net</title>
+
+<link rel="stylesheet" href="https://bjornruud.net/print.css" media="print">
+<link rel="stylesheet" href="https://bjornruud.net/main.css">
+
+
+<link rel="alternate" type="application/rss+xml" title="RSS" href="https://bjornruud.net/rss.xml">
+
+
+  
+</head>
+
+<body>
+  <div class="flex-container">
+    <div class="header-container">
+      <div class="header">
+        
+        <div class="header-title">
+  <a href="/">bjornruud.net</a>
+</div>
+<div class="header-subtitle">
+  <a href="https://bjornruud.net/rss.xml">rss</a> |
+  <a href="/blog/archive/">archive</a>
+</div>
+
+        
+      </div>
+    </div>
+
+    <div class="content-container">
+      <div class="content">
+        
+<article>
+  <div class="date">2012-11-04</div>
+  <div class="post">
+    <h1 id="manual-fusion-drive-configuration">Manual Fusion Drive Configuration</h1>
+<p>Apple is now selling Macs with a feature called Fusion Drive, which merges a SSD and a HDD and keeps your most used files on the SSD. This sounds a lot like tiering in enterprise storage solutions, <a href="http://arstechnica.com/apple/2012/10/more-on-fusion-drive-how-it-works-and-how-to-roll-your-own/">and indeed it is</a>. It turns out this is a built-in feature of CoreStorage (Apple's logical volume manager), and that means we can configure this setup on any Mac that runs OS X with Fusion Drive support (10.8.2 and onward guaranteed). I tried this successfully on my iMac with an Intel 520 120 GB SSD and a factory installed 1 TB HDD. I based my test on <a href="http://jollyjinx.tumblr.com/post/34638496292/fusion-drive-on-older-macs-yes-since-apple-has">the excellent work</a> done by <a href="http://jollyjinx.tumblr.com/">Patrick Stein aka jollyjinx</a>. This is what I did:</p>
+<p>Backup! This procedure will destroy all existing data, so a full backup is required. A Time Machine backup will simplify the installation process.</p>
+<p>To create the CoreStorage volume we'll need to boot from a 10.8.2 system. Download the OS X Mountain Lion installation app from the App Store. When the installation dialog pops up just quit it. Mount the installation disk image located here:</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">/Applications/Install OS X Mountain Lion.app/Contents/SharedSupport/InstallESD.dmg</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>Now restore the partition in this image to a USB stick. Insert the USB stick and open Disk Utility. Create a partition on the stick big enough to hold the install image. Select the partition contained in the mounted InstallESD image and choose the Restore tab. The source should already be filled with the correct information but there is no destination specified, so drag the partition created on the USB stick to this field. Press the Restore button to transfer the contents of the install image to the partition on the USB stick.</p>
+<p>Leave USB stick inserted and reboot Mac. When you hear the startup sound press and hold the Option (Alt) key. Select the install partition on the USB as boot drive. When the OS X installer has loaded open Disk Utility.</p>
+<p>We need partitions to include in the CoreStorage volume, one on the SSD and one on the HDD. Create a single partition on the HDD. As for the SSD, if you are using a non-Apple drive you won't have TRIM support in OS X, and one way to mitigate potential performance issues when the drive gets full (and it will at some point with this setup) is to overprovision free space so that there always will be a substantial pool of available cleared cells. If the SSD already has been filled up you can <a href="http://www.thomas-krenn.com/en/wiki/SSD_Secure_Erase">secure erase</a> it to recover from performance degradation.</p>
+<p><a href="http://www.storagereview.com/intel_ssd_520_enterprise_review">Overprovisioning can also improve performance</a> in general, but that depends on the workload and usage patterns. Keep in mind that SandForce equipped drives like the Intel 520 already are overprovisioned and hence might not require extra overprovisioning for normal use cases. I like the idea of overprovisioning so let's select 2 partitions for the SSD. The first is a normal partition 104 GB in size, the second is configured as free space.</p>
+<p>These partitions will now be joined as a logical volume in Core Storage. Quit Disk Utility, and at the installer dialog select the Tools menu and open Terminal. Let's take a look at the current partition layout.</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">$ diskutil list</span><span style="color:#dcdcdc;">
+/dev/disk0</span><span style="color:#dcdcdc;">
+   #:                       TYPE NAME                    SIZE       IDENTIFIER</span><span style="color:#dcdcdc;">
+   0:      GUID_partition_scheme                        *120.0 GB   disk0</span><span style="color:#dcdcdc;">
+   1:                        EFI                         209.7 MB   disk0s1</span><span style="color:#dcdcdc;">
+   2:                  Apple_HFS                         104.0 GB   disk0s2</span><span style="color:#dcdcdc;">
+/dev/disk1</span><span style="color:#dcdcdc;">
+   #:                       TYPE NAME                    SIZE       IDENTIFIER</span><span style="color:#dcdcdc;">
+   0:      GUID_partition_scheme                        *1.0 TB     disk1</span><span style="color:#dcdcdc;">
+   1:                        EFI                         209.7 MB   disk1s1</span><span style="color:#dcdcdc;">
+   2:                  Apple_HFS                         999.9 GB   disk1s2</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>Based on this we want to join disk0s2 and disk1s2. If we wanted to use all of the drives we could simply refer to disk0 and disk1, but since the SSD is now overprovisioned we must specify the partition(s) to use. First we need to create a logical volume group with CoreStorage.</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">$ diskutil cs create FusionVG disk0s2 disk1s2</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>Take note of the logical volume group UUID from that command (or use <code>diskutil cs list</code> to find it) as it's needed in order to create the logical volume.</p>
+<pre style="background-color:#1e1e1e;">
+<code><span style="color:#dcdcdc;">$ diskutil cs createVolume 35C7C1AD-463E-4D94-9FD4-C107D660643B jhfs+ Fusion 100%</span><span style="color:#dcdcdc;">
+$ diskutil cs list</span><span style="color:#dcdcdc;">
+CoreStorage logical volume groups (1 found)</span><span style="color:#dcdcdc;">
+|</span><span style="color:#dcdcdc;">
++-- Logical Volume Group 35C7C1AD-463E-4D94-9FD4-C107D660643B</span><span style="color:#dcdcdc;">
+    =========================================================</span><span style="color:#dcdcdc;">
+    Name:         FusionVG</span><span style="color:#dcdcdc;">
+    Size:         1103345127424 B (1.1 TB)</span><span style="color:#dcdcdc;">
+    Free Space:   28672 B (28.7 KB)</span><span style="color:#dcdcdc;">
+    |</span><span style="color:#dcdcdc;">
+    +-&lt; Physical Volume FDFE44CC-3151-4F68-AEEE-3BD3D1915C2A</span><span style="color:#dcdcdc;">
+    |   ----------------------------------------------------</span><span style="color:#dcdcdc;">
+    |   Index:    0</span><span style="color:#dcdcdc;">
+    |   Disk:     disk0s2</span><span style="color:#dcdcdc;">
+    |   Status:   Online</span><span style="color:#dcdcdc;">
+    |   Size:     104000000000 B (104.0 GB)</span><span style="color:#dcdcdc;">
+    |</span><span style="color:#dcdcdc;">
+    +-&lt; Physical Volume C6DB4E59-5499-47F6-81C7-3B71F9CAD769</span><span style="color:#dcdcdc;">
+    |   ----------------------------------------------------</span><span style="color:#dcdcdc;">
+    |   Index:    1</span><span style="color:#dcdcdc;">
+    |   Disk:     disk1s2</span><span style="color:#dcdcdc;">
+    |   Status:   Online</span><span style="color:#dcdcdc;">
+    |   Size:     999345127424 B (999.3 GB)</span><span style="color:#dcdcdc;">
+    |</span><span style="color:#dcdcdc;">
+    +-&gt; Logical Volume Family 11D7E8D0-195C-4658-B38B-9B3D9E48CCF4</span><span style="color:#dcdcdc;">
+        ----------------------------------------------------------</span><span style="color:#dcdcdc;">
+        Encryption Status:       Unlocked</span><span style="color:#dcdcdc;">
+        Encryption Type:         None</span><span style="color:#dcdcdc;">
+        Conversion Status:       NoConversion</span><span style="color:#dcdcdc;">
+        Conversion Direction:    -none-</span><span style="color:#dcdcdc;">
+        Has Encrypted Extents:   No</span><span style="color:#dcdcdc;">
+        Fully Secure:            No</span><span style="color:#dcdcdc;">
+        Passphrase Required:     No</span><span style="color:#dcdcdc;">
+        |</span><span style="color:#dcdcdc;">
+        +-&gt; Logical Volume 1CDA3D65-96DF-4F9B-A374-D08D26AF87EA</span><span style="color:#dcdcdc;">
+            ---------------------------------------------------</span><span style="color:#dcdcdc;">
+            Disk:               disk2</span><span style="color:#dcdcdc;">
+            Status:             Online</span><span style="color:#dcdcdc;">
+            Size (Total):       1098913529856 B (1.1 TB)</span><span style="color:#dcdcdc;">
+            Size (Converted):   -none-</span><span style="color:#dcdcdc;">
+            Revertible:         No</span><span style="color:#dcdcdc;">
+            LV Name:            Fusion</span><span style="color:#dcdcdc;">
+            Volume Name:        Fusion</span><span style="color:#dcdcdc;">
+            Content Hint:       Apple_HFS</span><span style="color:#dcdcdc;">
+</span></code></pre>
+<p>The logical volume is now ready for installation. Quit Terminal to go back to the installation dialog. In order to recreate the Recovery partition, do not restore directly from a Time Machine backup. Instead do a normal reinstallation of OS X and migrate data from the backup when presented with the option to do so.</p>
+<p>Enjoy your very own Fusion Drive!</p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="http://jollyjinx.tumblr.com/post/34638496292/fusion-drive-on-older-macs-yes-since-apple-has">Fusion Drive on older Macs? YES!</a></li>
+<li><a href="http://www.petralli.net/2012/10/analyzing-apples-fusion-drive-in-an-attempt-to-retrofit-an-existing-macs-with-an-ssd-and-a-traditional-hard-disk/">DIY Fusion Drive: an attempt to retrofit a pre-fall 2012 Mac with an SSD and a traditional hard disk</a></li>
+<li><a href="http://www.petralli.net/2012/10/what-happens-to-fusion-drive-when-you-use-boot-camp/">What happens to Fusion Drive when you use Boot Camp</a></li>
+<li><a href="http://www.storagereview.com/intel_ssd_520_enterprise_review">Intel SSD 520 Enterprise Review</a></li>
+<li><a href="http://www.anandtech.com/show/2738/8">Understanding the SSD Performance Degradation Problem</a></li>
+<li><a href="http://www.thomas-krenn.com/en/wiki/SSD_Secure_Erase">SSD Secure Erase</a></li>
+</ul>
+
+  </div>
+</article>
+
+      </div>
+    </div>
+
+    <div class="footer-container">
+      <div class="footer">
+        
+        Bjørn Olav Ruud &copy; 2021<br/>
+<a href="https://github.com/BjornRuud">GitHub</a> | <a href="https://www.linkedin.com/in/bjornruud/">LinkedIn</a> | <a href="https://twitter.com/BjornRuud">Twitter</a><br/>
+Built with <a href="https://www.getzola.org" target="_blank">Zola</a>
+
+        
+      </div>
+    </div>
+  </div>
+</body>
+</html>

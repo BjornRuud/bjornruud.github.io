@@ -1,0 +1,10 @@
+{% extends "index.html" %}
+
+{% block content %}
+<article>
+  <div class="date">{{ page.date }}</div>
+  <div class="post">
+    {{ page.content | safe }}
+  </div>
+</article>
+{% endblock content %}

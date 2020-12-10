@@ -1,0 +1,9 @@
+{% set section = get_section(path="blog/_index.md") %}
+{% for page in section.pages | reverse | slice(end=20) %}
+<div class="page-list-item">
+  <div class="date">{{ page.date }}</div>
+  <div class="title">
+    <a href="{{ page.permalink | safe }}">{{ page.title }}</a>
+  </div>
+</div>
+{% endfor %}
