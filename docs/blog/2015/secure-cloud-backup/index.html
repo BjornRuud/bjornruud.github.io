@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/main.css">
 
 
-<link rel="alternate" type="application/rss+xml" title="RSS" href="/rss.xml">
+<link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
 
 
   
@@ -29,7 +29,7 @@
   <a href="/">bjornruud.net</a>
 </div>
 <div class="header-subtitle">
-  <a href="/rss.xml">rss</a> |
+  <a href="/atom.xml">rss</a> |
   <a href="/blog/archive/">archive</a>
 </div>
 
@@ -44,39 +44,35 @@
   <div class="date">2015-03-29</div>
   <div class="post">
     <h1 id="encrypted-backup-to-cloud-using-encfs-on-os-x">Encrypted backup to cloud using EncFS on OS X</h1>
-<p>Using a file synchronization and backup service in the cloud like <a href="https://jottacloud.com">JottaCloud</a> or <a href="https://dropbox.com">Dropbox</a> for backups is convenient, but not as secure as you might think. In order to provide services like file sharing and media preview they have to use an encryption key that they control on their end, which means they can decrypt your data. If you want full privacy you have to be able to supply your own encryption key, and very few cloud storage providers have that option.</p>
-<p>You can however work around this problem by encrypting the backup before uploading it to the storage provider. Encrypted archives or disk images can be used and are easy to setup, but another option is to use <a href="https://vgough.github.io/encfs/">EncFS</a> to create an encrypted view of some part of your filesystem.</p>
+<p>Using a file synchronization and backup service in the cloud like <a rel="noopener" target="_blank" href="https://jottacloud.com">JottaCloud</a> or <a rel="noopener" target="_blank" href="https://dropbox.com">Dropbox</a> for backups is convenient, but not as secure as you might think. In order to provide services like file sharing and media preview they have to use an encryption key that they control on their end, which means they can decrypt your data. If you want full privacy you have to be able to supply your own encryption key, and very few cloud storage providers have that option.</p>
+<p>You can however work around this problem by encrypting the backup before uploading it to the storage provider. Encrypted archives or disk images can be used and are easy to setup, but another option is to use <a rel="noopener" target="_blank" href="https://vgough.github.io/encfs/">EncFS</a> to create an encrypted view of some part of your filesystem.</p>
 <p>Note: This article assumes you know your way around a Terminal window, and it will be easier to follow if you know a thing or two about bash scripting (bonus points for expect/tcl knowledge).</p>
 <h2 id="install-homebrew">Install Homebrew</h2>
-<p>The easiest way to get started is to install EncFS with <a href="http://brew.sh">Homebrew</a>. Many Homebrew formulae require Xcode for compilation, so go to the AppStore and install Xcode. Open Xcode and accept any license agreements that pop up, then quit Xcode.</p>
+<p>The easiest way to get started is to install EncFS with <a rel="noopener" target="_blank" href="http://brew.sh">Homebrew</a>. Many Homebrew formulae require Xcode for compilation, so go to the AppStore and install Xcode. Open Xcode and accept any license agreements that pop up, then quit Xcode.</p>
 <p>Next you need to install the Xcode command line tools. They are provided in the Xcode app bundle, and can be quickly installed from the command line. Open Terminal and type the following:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ xcode-select --install
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ xcode-select --install
 </span></code></pre>
 <p>Follow the instructions in the popup dialog, and after that you won't have to worry about Xcode again.</p>
 <p>Now you must install Homebrew. Paste the following into a terminal (or copy it from the Homebrew website if you are cautious/paranoid).</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ ruby -e &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)&quot;
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ ruby -e &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)&quot;
 </span></code></pre>
 <p>Follow the instructions, and then you are ready to brew.</p>
 <h2 id="install-encfs">Install EncFS</h2>
 <p>Installing EncFS is simple:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ brew install encfs
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ brew install encfs
 </span></code></pre>
 <p>If you are running OS X 10.10 or later you'll get an error about having to manually install <code>osxfuse</code>. This is because Yosemite (and later OS X versions) require all kernel extensions to be signed, and Homebrew doesn't do binary signing at the moment. Just follow the instructions provided by Homebrew to manually install <code>osxfuse</code>, then do <code>brew install encfs</code> again. Type <code>encfs -v</code> to verify EncFS is available.</p>
 <p>Note: If you're having trouble installing <code>osxfuse</code>, check if you already have it installed by looking for a &quot;Fuse for OS X&quot; icon in &quot;System Preferences&quot;. If there is such an icon there, open it and press the &quot;Remove&quot; button before trying to install again.</p>
 <h2 id="configure-reverse-encryption">Configure reverse encryption</h2>
 <p>EncFS has an option to do &quot;reverse encryption&quot;. This creates a folder that acts as an encrypted view of another folder, where the encrypted data is provided on the fly from the unencrypted files. This is the opposite of storing the files in encrypted form and providing an unencrypted view, hence &quot;reverse encryption&quot;.</p>
 <p>It is simple to configure. Assuming an existing folder called <code>MyFolder</code> and you want an encrypted folder called <code>MyFolderEnc</code>, try this:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ encfs --reverse MyFolder MyFolderEnc
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ encfs --reverse MyFolder MyFolderEnc
 </span></code></pre>
 <p>You will be presented with two standard configuration options, <code>standard</code> and <code>paranoid</code>, and an <code>expert</code> option. Standard defaults to AES-192 encryption with mostly default options, while Paranoid defaults to AES-256 with a few security enhancements. Even Standard is overkill for most use cases so select that and provide a password. Take look in the <code>MyFolderEnc</code> folder and you'll see encrypted versions of the files in <code>MyFolder</code>.</p>
 <p>To remove the encrypted view, unmount it:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ umount MyFolderEnc
-</span></code></pre><h2 id="encryption-options">Encryption options</h2>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ umount MyFolderEnc
+</span></code></pre>
+<h2 id="encryption-options">Encryption options</h2>
 <p>Using the <code>expert</code> setup option is useful to tailor the configuration to certain use cases. Let's take a look at the options that can help with performance and portability for the backup scenario described in this article.</p>
 <ul>
 <li><strong>Algorithm</strong>. Choose AES.</li>
@@ -89,81 +85,77 @@
 <h2 id="mount-shares-and-encrypted-folders">Mount shares and encrypted folders</h2>
 <p>Let's assume you have a NAS at home with Samba shares <code>share1</code> and <code>share2</code> that you want to backup to some cloud storage provider, and that you want the shares and encrypted folders mounted on login. The encrypted folders will be mounted to <code>share1-encfs</code> and <code>share2-encfs</code>.</p>
 <p>First you test the setup and prepare the EncFS config file:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ cd
-$ mkdir -p Volumes/share1 &amp;&amp; cd Volumes
-$ mount -t smbfs &quot;//user@server/share1&quot; &quot;$HOME/Volumes/share1&quot;
-[... Type password ...]
-$ ls share1 # Verify contents are there
-$ mkdir share1-encfs
-$ encfs --reverse &quot;$HOME/Volumes/share1&quot; &quot;$HOME/Volumes/share1-encfs&quot;
-[... Configure EncFS settings ...]
-$ ls share1-encfs # Verify encrypted contents are there
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ cd
+</span><span>$ mkdir -p Volumes/share1 &amp;&amp; cd Volumes
+</span><span>$ mount -t smbfs &quot;//user@server/share1&quot; &quot;$HOME/Volumes/share1&quot;
+</span><span>[... Type password ...]
+</span><span>$ ls share1 # Verify contents are there
+</span><span>$ mkdir share1-encfs
+</span><span>$ encfs --reverse &quot;$HOME/Volumes/share1&quot; &quot;$HOME/Volumes/share1-encfs&quot;
+</span><span>[... Configure EncFS settings ...]
+</span><span>$ ls share1-encfs # Verify encrypted contents are there
 </span></code></pre>
 <p>Repeat this for all shares you want to encrypt.</p>
 <p>Both Samba and EncFS will require passwords, and you store those in the login keychain for easy (but secure) access from scripts. Open the &quot;Keychain Access&quot; app, select the &quot;login&quot; keychain and the &quot;Passwords&quot; category.</p>
 <p>First create a password item for mounting encrypted folders. In the menu, select &quot;File -&gt; New Password Item&quot;. Give the item a name (like &quot;EncFS&quot;), set the &quot;Account Name&quot; to your user, and provide a password. Now test it:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ security find-generic-password -gs EncFS -w
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ security find-generic-password -gs EncFS -w
 </span></code></pre>
 <p>If this is the first time you use the <code>security</code> command you will get a popup asking for permission to access the keychain. Select &quot;Always allow&quot; to be able to run the command in a non-interactive session.</p>
 <p>If you are lucky you already have a password item for the server with the network shares. Search the item list for a network password with the name or IP of the server. If you found one, double-click it to see the details. Check that account, address and protocol are correct, and take note of them. If you can't find a matching network password you can create one manually, or simply connect to the share in the Finder and choose to remember credentials in the connect dialog.</p>
 <h2 id="mount-scripts">Mount scripts</h2>
 <p>Next create a script for mounting the SMB shares.</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ touch mount_smb.exp
-$ chmod a+x mount_smb.exp
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ touch mount_smb.exp
+</span><span>$ chmod a+x mount_smb.exp
 </span></code></pre>
 <p>Why the <code>exp</code> extension? I found that <code>mount_smbfs</code> has issues with many passwords when they are supplied as part of the host address, so this script will use <code>expect</code> which uses the Tcl scripting language to automatically provide user input. Open the file in your favorite text editor and paste in and modify this example script:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#608b4e;">#!/usr/bin/expect -f
-
-</span><span style="color:#569cd6;">set</span><span style="color:#dcdcdc;"> smb_server </span><span style="color:#d69d85;">&quot;server&quot;
-</span><span style="color:#569cd6;">set</span><span style="color:#dcdcdc;"> smb_user </span><span style="color:#d69d85;">&quot;user&quot;
-</span><span style="color:#569cd6;">set</span><span style="color:#dcdcdc;"> smb_password [</span><span style="color:#569cd6;">exec</span><span style="color:#dcdcdc;"> security find-internet-password </span><span style="color:#569cd6;">-</span><span style="color:#dcdcdc;">a $smb_user </span><span style="color:#569cd6;">-</span><span style="color:#dcdcdc;">s $smb_server </span><span style="color:#569cd6;">-</span><span style="color:#dcdcdc;">r </span><span style="color:#d69d85;">&quot;smb &quot; </span><span style="color:#569cd6;">-</span><span style="color:#dcdcdc;">w]
-</span><span style="color:#569cd6;">set</span><span style="color:#dcdcdc;"> smb_path </span><span style="color:#d69d85;">&quot;~/Volumes/</span><span style="color:#dcdcdc;">$smb_server</span><span style="color:#d69d85;">&quot;
-
-</span><span style="color:#569cd6;">puts </span><span style="color:#d69d85;">&quot;Mounting volumes on </span><span style="color:#dcdcdc;">$smb_user</span><span style="color:#d69d85;">@</span><span style="color:#dcdcdc;">$smb_server</span><span style="color:#d69d85;"> to </span><span style="color:#dcdcdc;">$smb_path</span><span style="color:#d69d85;">&quot;
-
-</span><span style="color:#569cd6;">set</span><span style="color:#dcdcdc;"> smb_volumes </span><span style="color:#d69d85;">{&quot;share1&quot; &quot;share2&quot;}
-</span><span style="color:#569cd6;">foreach</span><span style="color:#dcdcdc;"> vol $smb_volumes {
-    </span><span style="color:#569cd6;">set</span><span style="color:#dcdcdc;"> server_path </span><span style="color:#d69d85;">&quot;//</span><span style="color:#dcdcdc;">$smb_user</span><span style="color:#d69d85;">@</span><span style="color:#dcdcdc;">$smb_server</span><span style="color:#d69d85;">/</span><span style="color:#dcdcdc;">$vol</span><span style="color:#d69d85;">&quot;
-    </span><span style="color:#569cd6;">set</span><span style="color:#dcdcdc;"> mount_path </span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">$smb_path</span><span style="color:#d69d85;">/</span><span style="color:#dcdcdc;">$vol</span><span style="color:#d69d85;">&quot;
-    </span><span style="color:#569cd6;">set</span><span style="color:#dcdcdc;"> prompt </span><span style="color:#d69d85;">&quot;Password for </span><span style="color:#dcdcdc;">$smb_server</span><span style="color:#d69d85;">:&quot;
-
-    </span><span style="color:#dcdcdc;">spawn mount </span><span style="color:#569cd6;">-</span><span style="color:#dcdcdc;">t smbfs </span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">$server_path</span><span style="color:#d69d85;">&quot; &quot;</span><span style="color:#dcdcdc;">$mount_path</span><span style="color:#d69d85;">&quot;
-    </span><span style="color:#dcdcdc;">expect {
-        </span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">$prompt</span><span style="color:#d69d85;">&quot; </span><span style="color:#dcdcdc;">{
-            send </span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">$smb_password</span><span style="color:#e3bbab;">\n</span><span style="color:#d69d85;">&quot;
-        </span><span style="color:#dcdcdc;">} </span><span style="color:#569cd6;">eof </span><span style="color:#dcdcdc;">{
-            </span><span style="color:#569cd6;">puts </span><span style="color:#d69d85;">&quot;Mounted </span><span style="color:#dcdcdc;">$server_path</span><span style="color:#d69d85;"> on </span><span style="color:#dcdcdc;">$mount_path</span><span style="color:#d69d85;">&quot;
-        </span><span style="color:#dcdcdc;">} timeout {
-            </span><span style="color:#569cd6;">puts </span><span style="color:#d69d85;">&quot;Failed to mount </span><span style="color:#dcdcdc;">$server_path</span><span style="color:#d69d85;"> on </span><span style="color:#dcdcdc;">$mount_path</span><span style="color:#d69d85;">&quot;
-        </span><span style="color:#dcdcdc;">}
-    }
-}
+<pre data-lang="tcl" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-tcl "><code class="language-tcl" data-lang="tcl"><span style="color:#608b4e;">#!/usr/bin/expect -f
+</span><span>
+</span><span style="color:#569cd6;">set</span><span> smb_server </span><span style="color:#d69d85;">&quot;server&quot;
+</span><span style="color:#569cd6;">set</span><span> smb_user </span><span style="color:#d69d85;">&quot;user&quot;
+</span><span style="color:#569cd6;">set</span><span> smb_password [</span><span style="color:#569cd6;">exec</span><span> security find-internet-password </span><span style="color:#569cd6;">-</span><span>a $smb_user </span><span style="color:#569cd6;">-</span><span>s $smb_server </span><span style="color:#569cd6;">-</span><span>r </span><span style="color:#d69d85;">&quot;smb &quot; </span><span style="color:#569cd6;">-</span><span>w]
+</span><span style="color:#569cd6;">set</span><span> smb_path </span><span style="color:#d69d85;">&quot;~/Volumes/</span><span>$smb_server</span><span style="color:#d69d85;">&quot;
+</span><span>
+</span><span style="color:#569cd6;">puts </span><span style="color:#d69d85;">&quot;Mounting volumes on </span><span>$smb_user</span><span style="color:#d69d85;">@</span><span>$smb_server</span><span style="color:#d69d85;"> to </span><span>$smb_path</span><span style="color:#d69d85;">&quot;
+</span><span>
+</span><span style="color:#569cd6;">set</span><span> smb_volumes </span><span style="color:#d69d85;">{&quot;share1&quot; &quot;share2&quot;}
+</span><span style="color:#569cd6;">foreach</span><span> vol $smb_volumes {
+</span><span>    </span><span style="color:#569cd6;">set</span><span> server_path </span><span style="color:#d69d85;">&quot;//</span><span>$smb_user</span><span style="color:#d69d85;">@</span><span>$smb_server</span><span style="color:#d69d85;">/</span><span>$vol</span><span style="color:#d69d85;">&quot;
+</span><span>    </span><span style="color:#569cd6;">set</span><span> mount_path </span><span style="color:#d69d85;">&quot;</span><span>$smb_path</span><span style="color:#d69d85;">/</span><span>$vol</span><span style="color:#d69d85;">&quot;
+</span><span>    </span><span style="color:#569cd6;">set</span><span> prompt </span><span style="color:#d69d85;">&quot;Password for </span><span>$smb_server</span><span style="color:#d69d85;">:&quot;
+</span><span>
+</span><span>    spawn mount </span><span style="color:#569cd6;">-</span><span>t smbfs </span><span style="color:#d69d85;">&quot;</span><span>$server_path</span><span style="color:#d69d85;">&quot; &quot;</span><span>$mount_path</span><span style="color:#d69d85;">&quot;
+</span><span>    expect {
+</span><span>        </span><span style="color:#d69d85;">&quot;</span><span>$prompt</span><span style="color:#d69d85;">&quot; </span><span>{
+</span><span>            send </span><span style="color:#d69d85;">&quot;</span><span>$smb_password</span><span style="color:#e3bbab;">\n</span><span style="color:#d69d85;">&quot;
+</span><span>        } </span><span style="color:#569cd6;">eof </span><span>{
+</span><span>            </span><span style="color:#569cd6;">puts </span><span style="color:#d69d85;">&quot;Mounted </span><span>$server_path</span><span style="color:#d69d85;"> on </span><span>$mount_path</span><span style="color:#d69d85;">&quot;
+</span><span>        } timeout {
+</span><span>            </span><span style="color:#569cd6;">puts </span><span style="color:#d69d85;">&quot;Failed to mount </span><span>$server_path</span><span style="color:#d69d85;"> on </span><span>$mount_path</span><span style="color:#d69d85;">&quot;
+</span><span>        }
+</span><span>    }
+</span><span>}
 </span></code></pre>
 <p>Next do the same for a <code>bash</code> script called <code>mount_encfs.sh</code> to mount the encrypted folders:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ touch mount_encfs.sh
-$ chmod a+x mount_encfs.sh
-</span></code></pre><pre style="background-color:#1e1e1e;">
-<code><span style="color:#608b4e;">#!/bin/bash
-# Remember to mount SMB volumes before running this script!
-
-</span><span style="color:#dcdcdc;">ENCFS=</span><span style="background-color:#282828;color:#d69d85;">&quot;/usr/local/bin/encfs&quot;</span><span style="color:#dcdcdc;">
-ENCFS_PASS=</span><span style="background-color:#282828;color:#d69d85;">$(</span><span style="background-color:#282828;color:#dcdcdc;">security</span><span style="background-color:#282828;color:#d69d85;"> find-generic-password</span><span style="background-color:#282828;color:#dcdcdc;"> -gs</span><span style="background-color:#282828;color:#d69d85;"> EncFS</span><span style="background-color:#282828;color:#dcdcdc;"> -w</span><span style="background-color:#282828;color:#d69d85;">)</span><span style="color:#dcdcdc;">
-
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ touch mount_encfs.sh
+</span><span>$ chmod a+x mount_encfs.sh
+</span></code></pre>
+<pre data-lang="bash" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#608b4e;">#!/bin/bash
+</span><span style="color:#608b4e;"># Remember to mount SMB volumes before running this script!
+</span><span>
+</span><span>ENCFS=</span><span style="background-color:#282828;color:#d69d85;">&quot;/usr/local/bin/encfs&quot;</span><span>
+</span><span>ENCFS_PASS=</span><span style="background-color:#282828;color:#d69d85;">$(</span><span style="background-color:#282828;color:#dcdcdc;">security</span><span style="background-color:#282828;color:#d69d85;"> find-generic-password</span><span style="background-color:#282828;color:#dcdcdc;"> -gs</span><span style="background-color:#282828;color:#d69d85;"> EncFS</span><span style="background-color:#282828;color:#dcdcdc;"> -w</span><span style="background-color:#282828;color:#d69d85;">)</span><span>
+</span><span>
 </span><span style="color:#608b4e;"># Reverse encrypted dirs
-</span><span style="color:#dcdcdc;">SERVER=</span><span style="background-color:#282828;color:#d69d85;">&quot;server&quot;</span><span style="color:#dcdcdc;">
-ENC_DIRS=</span><span style="background-color:#282828;color:#d69d85;">&quot;share1 share2&quot;</span><span style="color:#dcdcdc;">
-</span><span style="color:#569cd6;">for</span><span style="color:#dcdcdc;"> folder </span><span style="color:#569cd6;">in </span><span style="color:#dcdcdc;">$ENC_DIRS</span><span style="color:#569cd6;">; do
-    </span><span style="color:#dcdcdc;">src_path=</span><span style="background-color:#282828;color:#d69d85;">&quot;$</span><span style="background-color:#282828;color:#dcdcdc;">HOME</span><span style="background-color:#282828;color:#d69d85;">/Volumes/$</span><span style="background-color:#282828;color:#dcdcdc;">SERVER</span><span style="background-color:#282828;color:#d69d85;">/$</span><span style="background-color:#282828;color:#dcdcdc;">folder</span><span style="background-color:#282828;color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">
-    enc_path=</span><span style="background-color:#282828;color:#d69d85;">&quot;$</span><span style="background-color:#282828;color:#dcdcdc;">src_path</span><span style="background-color:#282828;color:#d69d85;">-encfs&quot;</span><span style="color:#dcdcdc;">
-    echo -n </span><span style="color:#d69d85;">&quot;$</span><span style="color:#dcdcdc;">ENCFS_PASS</span><span style="color:#d69d85;">&quot; </span><span style="color:#569cd6;">| </span><span style="color:#dcdcdc;">\
-    </span><span style="color:#d69d85;">&quot;$</span><span style="color:#dcdcdc;">ENCFS</span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;"> -S -o volname=</span><span style="color:#d69d85;">&quot;$</span><span style="color:#dcdcdc;">folder</span><span style="color:#d69d85;">-encfs&quot;</span><span style="color:#dcdcdc;"> --reverse </span><span style="color:#d69d85;">&quot;$</span><span style="color:#dcdcdc;">src_path</span><span style="color:#d69d85;">&quot; &quot;$</span><span style="color:#dcdcdc;">enc_path</span><span style="color:#d69d85;">&quot;
+</span><span>SERVER=</span><span style="background-color:#282828;color:#d69d85;">&quot;server&quot;</span><span>
+</span><span>ENC_DIRS=</span><span style="background-color:#282828;color:#d69d85;">&quot;share1 share2&quot;</span><span>
+</span><span style="color:#569cd6;">for</span><span> folder </span><span style="color:#569cd6;">in </span><span>$ENC_DIRS</span><span style="color:#569cd6;">; do
+</span><span>    src_path=</span><span style="background-color:#282828;color:#d69d85;">&quot;$</span><span style="background-color:#282828;color:#dcdcdc;">HOME</span><span style="background-color:#282828;color:#d69d85;">/Volumes/$</span><span style="background-color:#282828;color:#dcdcdc;">SERVER</span><span style="background-color:#282828;color:#d69d85;">/$</span><span style="background-color:#282828;color:#dcdcdc;">folder</span><span style="background-color:#282828;color:#d69d85;">&quot;</span><span>
+</span><span>    enc_path=</span><span style="background-color:#282828;color:#d69d85;">&quot;$</span><span style="background-color:#282828;color:#dcdcdc;">src_path</span><span style="background-color:#282828;color:#d69d85;">-encfs&quot;</span><span>
+</span><span>    echo -n </span><span style="color:#d69d85;">&quot;$</span><span>ENCFS_PASS</span><span style="color:#d69d85;">&quot; </span><span style="color:#569cd6;">| </span><span>\
+</span><span>    </span><span style="color:#d69d85;">&quot;$</span><span>ENCFS</span><span style="color:#d69d85;">&quot;</span><span> -S -o volname=</span><span style="color:#d69d85;">&quot;$</span><span>folder</span><span style="color:#d69d85;">-encfs&quot;</span><span> --reverse </span><span style="color:#d69d85;">&quot;$</span><span>src_path</span><span style="color:#d69d85;">&quot; &quot;$</span><span>enc_path</span><span style="color:#d69d85;">&quot;
 </span><span style="color:#569cd6;">done
-</span></code></pre><h2 id="mount-on-login">Mount on login</h2>
+</span></code></pre>
+<h2 id="mount-on-login">Mount on login</h2>
 <p>You can use Automator to create a workflow that mounts everyting on login. Open Automator, choose &quot;File -&gt; New&quot; in the menu and select &quot;Application&quot;. Select the &quot;Utilities&quot; category and drag &quot;Run Shell Script&quot; into the workflow. Replace the command contents with the path to the script that mounts Samba shares. Next drag another &quot;Run Shell Script&quot; into the workflow below the first one, and enter the path to the script that mounts the reverse encrypted folders. To test the workflow, unmount the shares and folders that are already mounted and hit &quot;Run&quot;.</p>
 <p>Save the workflow, then open &quot;System Preferences -&gt; Users and Groups&quot;. Select your user and navigate to &quot;Login Items&quot;. Press the plus button to add the workflow app you just saved, and check the &quot;Hide&quot; checkbox (you may have to unlock the panel to make changes).</p>
 <p>As a final test reboot the Mac. All shares and encrypted folders should be mounted when you login, and are ready to be securely backed up wherever you want.</p>

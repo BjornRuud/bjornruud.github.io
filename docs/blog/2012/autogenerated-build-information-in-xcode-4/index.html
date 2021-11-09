@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/main.css">
 
 
-<link rel="alternate" type="application/rss+xml" title="RSS" href="/rss.xml">
+<link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
 
 
   
@@ -29,7 +29,7 @@
   <a href="/">bjornruud.net</a>
 </div>
 <div class="header-subtitle">
-  <a href="/rss.xml">rss</a> |
+  <a href="/atom.xml">rss</a> |
   <a href="/blog/archive/">archive</a>
 </div>
 
@@ -52,52 +52,48 @@
 <li>Include at least build date and revision instead of just build. Other possible data fields could be branch, tag, user, host, etc. This is necessary because a distributed development environment without a dedicated place to create builds has no way to synchronize build numbers. It is also impossible to know who created the build.</li>
 </ul>
 <p>The first step to meet these requirements was to write a script, <code>setversion.sh</code>, which leverages the PlistBuddy tool to create and modify a plist:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#608b4e;">#!/bin/bash</span><span style="color:#608b4e;">
-</span><span style="color:#dcdcdc;">
-PLIST=</span><span style="background-color:#282828;color:#d69d85;">&quot;$</span><span style="background-color:#282828;color:#dcdcdc;">1</span><span style="background-color:#282828;color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-HG=</span><span style="background-color:#282828;color:#d69d85;">/usr/local/bin/hg</span><span style="color:#dcdcdc;">
-PLISTBUDDY=</span><span style="background-color:#282828;color:#d69d85;">/usr/libexec/PlistBuddy</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-fields=(</span><span style="color:#dcdcdc;">
-    </span><span style="color:#d69d85;">&quot;BuildDate&quot; &quot;$(</span><span style="color:#dcdcdc;">date -u</span><span style="color:#d69d85;"> +&#39;%F %T&#39;)&quot;</span><span style="color:#dcdcdc;">
-    </span><span style="color:#d69d85;">&quot;BuildRevision&quot; &quot;$(</span><span style="color:#dcdcdc;">$HG</span><span style="color:#d69d85;"> identify </span><span style="color:#569cd6;">| </span><span style="color:#dcdcdc;">cut -d </span><span style="color:#d69d85;">&#39; &#39;</span><span style="color:#dcdcdc;"> -f1</span><span style="color:#d69d85;">)&quot;</span><span style="color:#dcdcdc;">
-)</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
+<pre data-lang="bash" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#608b4e;">#!/bin/bash</span><span style="color:#608b4e;">
+</span><span>
+</span><span>PLIST=</span><span style="background-color:#282828;color:#d69d85;">&quot;$</span><span style="background-color:#282828;color:#dcdcdc;">1</span><span style="background-color:#282828;color:#d69d85;">&quot;</span><span>
+</span><span>
+</span><span>HG=</span><span style="background-color:#282828;color:#d69d85;">/usr/local/bin/hg</span><span>
+</span><span>PLISTBUDDY=</span><span style="background-color:#282828;color:#d69d85;">/usr/libexec/PlistBuddy</span><span>
+</span><span>
+</span><span>fields=(</span><span>
+</span><span>    </span><span style="color:#d69d85;">&quot;BuildDate&quot; &quot;$(</span><span>date -u</span><span style="color:#d69d85;"> +&#39;%F %T&#39;)&quot;</span><span>
+</span><span>    </span><span style="color:#d69d85;">&quot;BuildRevision&quot; &quot;$(</span><span>$HG</span><span style="color:#d69d85;"> identify </span><span style="color:#569cd6;">| </span><span>cut -d </span><span style="color:#d69d85;">&#39; &#39;</span><span> -f1</span><span style="color:#d69d85;">)&quot;</span><span>
+</span><span>)</span><span>
+</span><span>
 </span><span style="color:#608b4e;"># Create empty plist if it doesn&#39;t exist, clear it if it does</span><span style="color:#608b4e;">
-</span><span style="color:#dcdcdc;">$PLISTBUDDY -x -c </span><span style="color:#d69d85;">&quot;Clear dict&quot; &quot;$</span><span style="color:#dcdcdc;">PLIST</span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
+</span><span>$PLISTBUDDY -x -c </span><span style="color:#d69d85;">&quot;Clear dict&quot; &quot;$</span><span>PLIST</span><span style="color:#d69d85;">&quot;</span><span>
+</span><span>
 </span><span style="color:#608b4e;"># Add all fields to plist</span><span style="color:#608b4e;">
-</span><span style="color:#569cd6;">for </span><span style="color:#dcdcdc;">((i=</span><span style="color:#b5cea8;">0</span><span style="color:#dcdcdc;">; i </span><span style="color:#569cd6;">&lt; </span><span style="color:#dcdcdc;">${#fields[*]}; i=i+</span><span style="color:#b5cea8;">2</span><span style="color:#dcdcdc;">))</span><span style="color:#dcdcdc;">
-</span><span style="color:#569cd6;">do</span><span style="color:#dcdcdc;">
-    name=</span><span style="background-color:#282828;color:#d69d85;">${</span><span style="background-color:#282828;color:#dcdcdc;">fields[i]</span><span style="background-color:#282828;color:#d69d85;">}</span><span style="color:#dcdcdc;">
-    value=</span><span style="background-color:#282828;color:#d69d85;">${</span><span style="background-color:#282828;color:#dcdcdc;">fields[i+</span><span style="background-color:#282828;color:#b5cea8;">1</span><span style="background-color:#282828;color:#dcdcdc;">]</span><span style="background-color:#282828;color:#d69d85;">}</span><span style="color:#dcdcdc;">
-    $PLISTBUDDY -x -c </span><span style="color:#d69d85;">&quot;Add :$</span><span style="color:#dcdcdc;">name</span><span style="color:#d69d85;"> string </span><span style="color:#e3bbab;">\&quot;</span><span style="color:#d69d85;">$</span><span style="color:#dcdcdc;">value</span><span style="color:#e3bbab;">\&quot;</span><span style="color:#d69d85;">&quot; &quot;$</span><span style="color:#dcdcdc;">PLIST</span><span style="color:#d69d85;">&quot;</span><span style="color:#dcdcdc;">
-</span><span style="color:#569cd6;">done</span><span style="color:#dcdcdc;">
+</span><span style="color:#569cd6;">for </span><span>((i=</span><span style="color:#b5cea8;">0</span><span>; i </span><span style="color:#569cd6;">&lt; </span><span>${#fields[*]}; i=i+</span><span style="color:#b5cea8;">2</span><span>))</span><span>
+</span><span style="color:#569cd6;">do</span><span>
+</span><span>    name=</span><span style="background-color:#282828;color:#d69d85;">${</span><span style="background-color:#282828;color:#dcdcdc;">fields[i]</span><span style="background-color:#282828;color:#d69d85;">}</span><span>
+</span><span>    value=</span><span style="background-color:#282828;color:#d69d85;">${</span><span style="background-color:#282828;color:#dcdcdc;">fields[i+</span><span style="background-color:#282828;color:#b5cea8;">1</span><span style="background-color:#282828;color:#dcdcdc;">]</span><span style="background-color:#282828;color:#d69d85;">}</span><span>
+</span><span>    $PLISTBUDDY -x -c </span><span style="color:#d69d85;">&quot;Add :$</span><span>name</span><span style="color:#d69d85;"> string </span><span style="color:#e3bbab;">\&quot;</span><span style="color:#d69d85;">$</span><span>value</span><span style="color:#e3bbab;">\&quot;</span><span style="color:#d69d85;">&quot; &quot;$</span><span>PLIST</span><span style="color:#d69d85;">&quot;</span><span>
+</span><span style="color:#569cd6;">done</span><span>
 </span></code></pre>
-<p>The script adds two fields. BuildDate is the UTC timestamp of the build, and BuildRevision is the short form revision hash from the <a href="http://mercurial.selenic.com/">Mercurial</a> repo. This script is not added to the Xcode project but is kept in the repo (or somewhere more suitable for easy access and sharing).</p>
+<p>The script adds two fields. BuildDate is the UTC timestamp of the build, and BuildRevision is the short form revision hash from the <a rel="noopener" target="_blank" href="http://mercurial.selenic.com/">Mercurial</a> repo. This script is not added to the Xcode project but is kept in the repo (or somewhere more suitable for easy access and sharing).</p>
 <p>Next we need to generate a version plist so that we can add it to the project. Run the script in a shell with a suitable plist path and name as argument.</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">./setversion.sh MyProject-Version.plist</span><span style="color:#dcdcdc;">
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>./setversion.sh MyProject-Version.plist</span><span>
 </span></code></pre>
 <p>Add the generated file to the Xcode project and make sure to mark the proper targets for it if you have more than one.</p>
 <p>This file shouldn't be tracked in the repo so we add it to <code>.hgignore</code>:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">*-Version.plist</span><span style="color:#dcdcdc;">
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>*-Version.plist</span><span>
 </span></code></pre>
 <p>Next we configure the script to run for each build. Select your project in Xcode and go to &quot;Build Phases&quot; for the target you want to add version information to. Select &quot;Add Build Phase&quot; and choose &quot;Add Run Script&quot;. In the script text field add the path to the script with path to the version plist as argument.</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$SRCROOT/$PROJECT_NAME/setversion.sh </span><span style="color:#d69d85;">&quot;$</span><span style="color:#dcdcdc;">SRCROOT</span><span style="color:#d69d85;">/$</span><span style="color:#dcdcdc;">PROJECT_NAME</span><span style="color:#d69d85;">/$</span><span style="color:#dcdcdc;">PROJECT_NAME</span><span style="color:#d69d85;">-Version.plist&quot;</span><span style="color:#dcdcdc;">
+<pre data-lang="bash" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-bash "><code class="language-bash" data-lang="bash"><span>$SRCROOT/$PROJECT_NAME/setversion.sh </span><span style="color:#d69d85;">&quot;$</span><span>SRCROOT</span><span style="color:#d69d85;">/$</span><span>PROJECT_NAME</span><span style="color:#d69d85;">/$</span><span>PROJECT_NAME</span><span style="color:#d69d85;">-Version.plist&quot;</span><span>
 </span></code></pre>
 <p>Rename the build phase if you like and drag it up below &quot;Target Dependencies&quot; to make sure it runs before files are compiled and copied.</p>
 <p>That's it! Whenever a build is done in Xcode the version plist will be generated and can be easily accessed:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">NSString *versionPath = [[NSBundle mainBundle] pathForResource:@&quot;MyProject-Version&quot; ofType:@&quot;plist&quot;];</span><span style="color:#dcdcdc;">
-NSDictionary *versionDict = [NSDictionary dictionaryWithContentsOfFile:versionPath];</span><span style="color:#dcdcdc;">
-NSString *buildDate = [versionDict objectForKey:@&quot;BuildDate&quot;];</span><span style="color:#dcdcdc;">
-NSString *revision = [versionDict objectForKey:@&quot;BuildRevision&quot;];</span><span style="color:#dcdcdc;">
+<pre data-lang="m" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-m "><code class="language-m" data-lang="m"><span>NSString </span><span style="color:#569cd6;">*</span><span>versionPath = [[NSBundle mainBundle] pathForResource</span><span style="color:#569cd6;">:</span><span style="color:#d69d85;">@&quot;MyProject-Version&quot;</span><span> ofType</span><span style="color:#569cd6;">:</span><span style="color:#d69d85;">@&quot;plist&quot;</span><span>];</span><span>
+</span><span>NSDictionary </span><span style="color:#569cd6;">*</span><span>versionDict = [NSDictionary dictionaryWithContentsOfFile:versionPath];</span><span>
+</span><span>NSString </span><span style="color:#569cd6;">*</span><span>buildDate = [versionDict objectForKey:</span><span style="color:#d69d85;">@&quot;BuildDate&quot;</span><span>];</span><span>
+</span><span>NSString </span><span style="color:#569cd6;">*</span><span>revision = [versionDict objectForKey:</span><span style="color:#d69d85;">@&quot;BuildRevision&quot;</span><span>];</span><span>
 </span></code></pre>
+
   </div>
 </article>
 

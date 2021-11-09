@@ -64,7 +64,7 @@ Rename the build phase if you like and drag it up below "Target Dependencies" to
 
 That's it! Whenever a build is done in Xcode the version plist will be generated and can be easily accessed:
 
-```objc
+```m
 NSString *versionPath = [[NSBundle mainBundle] pathForResource:@"MyProject-Version" ofType:@"plist"];
 NSDictionary *versionDict = [NSDictionary dictionaryWithContentsOfFile:versionPath];
 NSString *buildDate = [versionDict objectForKey:@"BuildDate"];

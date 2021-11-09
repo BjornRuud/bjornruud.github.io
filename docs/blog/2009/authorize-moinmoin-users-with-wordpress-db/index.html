@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/main.css">
 
 
-<link rel="alternate" type="application/rss+xml" title="RSS" href="/rss.xml">
+<link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
 
 
   
@@ -29,7 +29,7 @@
   <a href="/">bjornruud.net</a>
 </div>
 <div class="header-subtitle">
-  <a href="/rss.xml">rss</a> |
+  <a href="/atom.xml">rss</a> |
   <a href="/blog/archive/">archive</a>
 </div>
 
@@ -44,120 +44,119 @@
   <div class="date">2009-10-17</div>
   <div class="post">
     <h1 id="authorize-moinmoin-users-with-wordpress-db">Authorize MoinMoin Users With WordPress DB</h1>
-<p>In order to authorize <a href="http://moinmo.in/">MoinMoin</a> wiki users with a <a href="http://wordpress.org/">WordPress</a> user database, MoinMoin needs a custom authorization plugin. Two packages are required for it to work: <a href="http://sourceforge.net/projects/mysql-python">MySQLdb</a> for MySQL support, and the <a href="http://www.openwall.com/phpass/">PHPass</a> Python module for bcrypt password hash support so we can compare stored and given password.</p>
+<p>In order to authorize <a rel="noopener" target="_blank" href="http://moinmo.in/">MoinMoin</a> wiki users with a <a rel="noopener" target="_blank" href="http://wordpress.org/">WordPress</a> user database, MoinMoin needs a custom authorization plugin. Two packages are required for it to work: <a rel="noopener" target="_blank" href="http://sourceforge.net/projects/mysql-python">MySQLdb</a> for MySQL support, and the <a rel="noopener" target="_blank" href="http://www.openwall.com/phpass/">PHPass</a> Python module for bcrypt password hash support so we can compare stored and given password.</p>
 <p>The following is the necessary code from <code>wikiconfig.py</code>. You can put this anywhere you want as long as Python can find it, but sticking it in <code>wikiconfig.py</code> is an easy solution.</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#569cd6;">class </span><span style="color:#dcdcdc;">WordpressAuth(</span><span style="color:#4ec9b0;">BaseAuth</span><span style="color:#dcdcdc;">):</span><span style="color:#dcdcdc;">
-    </span><span style="color:#608b4e;">&quot;&quot;&quot;Authenticate users with a Wordpress database.</span><span style="color:#608b4e;">
+<pre data-lang="python" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-python "><code class="language-python" data-lang="python"><span style="color:#569cd6;">class </span><span>WordpressAuth(</span><span style="color:#4ec9b0;">BaseAuth</span><span>):</span><span>
+</span><span>    </span><span style="color:#608b4e;">&quot;&quot;&quot;Authenticate users with a Wordpress database.</span><span style="color:#608b4e;">
 </span><span style="color:#608b4e;">
-    This class has the following module requirements:</span><span style="color:#608b4e;">
-    - MySQLdb (http://sourceforge.net/projects/mysql-python)</span><span style="color:#608b4e;">
-    - phpass (http://www.openwall.com/phpass/)</span><span style="color:#608b4e;">
-    &quot;&quot;&quot;</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-    login_inputs = [</span><span style="color:#d69d85;">&#39;username&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;password&#39;</span><span style="color:#dcdcdc;">]</span><span style="color:#dcdcdc;">
-    logout_possible = </span><span style="color:#569cd6;">True</span><span style="color:#dcdcdc;">
-    name = </span><span style="color:#d69d85;">&#39;wordpress&#39;</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-    </span><span style="color:#569cd6;">def </span><span style="color:#dcdcdc;">__init__(self, autocreate=</span><span style="color:#569cd6;">False</span><span style="color:#dcdcdc;">,</span><span style="color:#dcdcdc;">
-                 db_host=</span><span style="color:#d69d85;">&#39;localhost&#39;</span><span style="color:#dcdcdc;">, db_name=</span><span style="color:#d69d85;">&#39;&#39;</span><span style="color:#dcdcdc;">,</span><span style="color:#dcdcdc;">
-                 db_user=</span><span style="color:#d69d85;">&#39;&#39;</span><span style="color:#dcdcdc;">, db_passwd=</span><span style="color:#d69d85;">&#39;&#39;</span><span style="color:#dcdcdc;">):</span><span style="color:#dcdcdc;">
-        </span><span style="color:#608b4e;">&quot;&quot;&quot;Initialize class.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">    This class has the following module requirements:</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">    - MySQLdb (http://sourceforge.net/projects/mysql-python)</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">    - phpass (http://www.openwall.com/phpass/)</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">    &quot;&quot;&quot;</span><span>
+</span><span>
+</span><span>    login_inputs = [</span><span style="color:#d69d85;">&#39;username&#39;</span><span>, </span><span style="color:#d69d85;">&#39;password&#39;</span><span>]</span><span>
+</span><span>    logout_possible = </span><span style="color:#569cd6;">True</span><span>
+</span><span>    name = </span><span style="color:#d69d85;">&#39;wordpress&#39;</span><span>
+</span><span>
+</span><span>    </span><span style="color:#569cd6;">def </span><span>__init__(self, autocreate=</span><span style="color:#569cd6;">False</span><span>,</span><span>
+</span><span>                 db_host=</span><span style="color:#d69d85;">&#39;localhost&#39;</span><span>, db_name=</span><span style="color:#d69d85;">&#39;&#39;</span><span>,</span><span>
+</span><span>                 db_user=</span><span style="color:#d69d85;">&#39;&#39;</span><span>, db_passwd=</span><span style="color:#d69d85;">&#39;&#39;</span><span>):</span><span>
+</span><span>        </span><span style="color:#608b4e;">&quot;&quot;&quot;Initialize class.</span><span style="color:#608b4e;">
 </span><span style="color:#608b4e;">
-        autocreate -- When set to False Moin user accounts are not updated</span><span style="color:#608b4e;">
-                      or created.</span><span style="color:#608b4e;">
-        db_host -- Hostname where Wordpress DB resides.</span><span style="color:#608b4e;">
-        db_name -- Name of Wordpress DB.</span><span style="color:#608b4e;">
-        db_user -- Name of DB account with read rights to the wp_user table.</span><span style="color:#608b4e;">
-        db_passwd -- Password of DB account.</span><span style="color:#608b4e;">
-        &quot;&quot;&quot;</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-        BaseAuth.__init__(self)</span><span style="color:#dcdcdc;">
-        self.autocreate = autocreate</span><span style="color:#dcdcdc;">
-        self.db_host = db_host</span><span style="color:#dcdcdc;">
-        self.db_name = db_name</span><span style="color:#dcdcdc;">
-        self.db_user = db_user</span><span style="color:#dcdcdc;">
-        self.db_passwd = db_passwd</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-    </span><span style="color:#569cd6;">def </span><span style="color:#dcdcdc;">login(self, request, user_obj, </span><span style="color:#569cd6;">**</span><span style="color:#dcdcdc;">kw):</span><span style="color:#dcdcdc;">
-        </span><span style="color:#608b4e;">&quot;&quot;&quot;Handle Moin login request, using Wordpress DB for authentication.&quot;&quot;&quot;</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-        username = kw.get(</span><span style="color:#d69d85;">&#39;username&#39;</span><span style="color:#dcdcdc;">)</span><span style="color:#dcdcdc;">
-        password = kw.get(</span><span style="color:#d69d85;">&#39;password&#39;</span><span style="color:#dcdcdc;">)</span><span style="color:#dcdcdc;">
-        _ = request.getText</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-        </span><span style="color:#608b4e;"># Continue if user is already valid</span><span style="color:#608b4e;">
-        </span><span style="color:#569cd6;">if </span><span style="color:#dcdcdc;">user_obj </span><span style="color:#569cd6;">and </span><span style="color:#dcdcdc;">user_obj.valid:</span><span style="color:#dcdcdc;">
-            </span><span style="color:#569cd6;">return </span><span style="color:#dcdcdc;">ContinueLogin(user_obj)</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-        </span><span style="color:#569cd6;">if not </span><span style="color:#dcdcdc;">(username </span><span style="color:#569cd6;">and </span><span style="color:#dcdcdc;">password):</span><span style="color:#dcdcdc;">
-            </span><span style="color:#569cd6;">return </span><span style="color:#dcdcdc;">ContinueLogin(user_obj, _(</span><span style="color:#d69d85;">&quot;Please enter both user name and password.&quot;</span><span style="color:#dcdcdc;">))</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-        </span><span style="color:#608b4e;"># Authenticate user and password against Wordpress DB</span><span style="color:#608b4e;">
-        </span><span style="color:#dcdcdc;">row = self.verifyUser(username, password)</span><span style="color:#dcdcdc;">
-        </span><span style="color:#569cd6;">if </span><span style="color:#dcdcdc;">row:</span><span style="color:#dcdcdc;">
-            user_login, user_pass, user_nicename, user_email = row</span><span style="color:#dcdcdc;">
-            u = user.User(request,</span><span style="color:#dcdcdc;">
-                          auth_username=username,</span><span style="color:#dcdcdc;">
-                          auth_method=self.name,</span><span style="color:#dcdcdc;">
-                          auth_attribs=(</span><span style="color:#d69d85;">&#39;name&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;password&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;email&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;aliasname&#39;</span><span style="color:#dcdcdc;">))</span><span style="color:#dcdcdc;">
-            u.name = user_login</span><span style="color:#dcdcdc;">
-            u.aliasname = user_nicename</span><span style="color:#dcdcdc;">
-            u.email = user_email</span><span style="color:#dcdcdc;">
-            </span><span style="color:#569cd6;">if </span><span style="color:#dcdcdc;">self.autocreate:</span><span style="color:#dcdcdc;">
-                u.create_or_update(</span><span style="color:#569cd6;">True</span><span style="color:#dcdcdc;">)</span><span style="color:#dcdcdc;">
-            </span><span style="color:#569cd6;">return </span><span style="color:#dcdcdc;">ContinueLogin(u)</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-        </span><span style="color:#569cd6;">return </span><span style="color:#dcdcdc;">ContinueLogin(user_obj, _(</span><span style="color:#d69d85;">&quot;Invalid username or password.&quot;</span><span style="color:#dcdcdc;">))</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-    </span><span style="color:#569cd6;">def </span><span style="color:#dcdcdc;">verifyUser(self, username=</span><span style="color:#d69d85;">&#39;&#39;</span><span style="color:#dcdcdc;">, password=</span><span style="color:#d69d85;">&#39;&#39;</span><span style="color:#dcdcdc;">):</span><span style="color:#dcdcdc;">
-        </span><span style="color:#608b4e;">&quot;&quot;&quot;Verify a username and password with a Wordpress database.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        autocreate -- When set to False Moin user accounts are not updated</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">                      or created.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        db_host -- Hostname where Wordpress DB resides.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        db_name -- Name of Wordpress DB.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        db_user -- Name of DB account with read rights to the wp_user table.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        db_passwd -- Password of DB account.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        &quot;&quot;&quot;</span><span>
+</span><span>
+</span><span>        BaseAuth.__init__(self)</span><span>
+</span><span>        self.autocreate = autocreate</span><span>
+</span><span>        self.db_host = db_host</span><span>
+</span><span>        self.db_name = db_name</span><span>
+</span><span>        self.db_user = db_user</span><span>
+</span><span>        self.db_passwd = db_passwd</span><span>
+</span><span>
+</span><span>    </span><span style="color:#569cd6;">def </span><span>login(self, request, user_obj, </span><span style="color:#569cd6;">**</span><span>kw):</span><span>
+</span><span>        </span><span style="color:#608b4e;">&quot;&quot;&quot;Handle Moin login request, using Wordpress DB for authentication.&quot;&quot;&quot;</span><span>
+</span><span>
+</span><span>        username = kw.get(</span><span style="color:#d69d85;">&#39;username&#39;</span><span>)</span><span>
+</span><span>        password = kw.get(</span><span style="color:#d69d85;">&#39;password&#39;</span><span>)</span><span>
+</span><span>        _ = request.getText</span><span>
+</span><span>
+</span><span>        </span><span style="color:#608b4e;"># Continue if user is already valid</span><span style="color:#608b4e;">
+</span><span>        </span><span style="color:#569cd6;">if </span><span>user_obj </span><span style="color:#569cd6;">and </span><span>user_obj.valid:</span><span>
+</span><span>            </span><span style="color:#569cd6;">return </span><span>ContinueLogin(user_obj)</span><span>
+</span><span>
+</span><span>        </span><span style="color:#569cd6;">if not </span><span>(username </span><span style="color:#569cd6;">and </span><span>password):</span><span>
+</span><span>            </span><span style="color:#569cd6;">return </span><span>ContinueLogin(user_obj, _(</span><span style="color:#d69d85;">&quot;Please enter both user name and password.&quot;</span><span>))</span><span>
+</span><span>
+</span><span>        </span><span style="color:#608b4e;"># Authenticate user and password against Wordpress DB</span><span style="color:#608b4e;">
+</span><span>        row = self.verifyUser(username, password)</span><span>
+</span><span>        </span><span style="color:#569cd6;">if </span><span>row:</span><span>
+</span><span>            user_login, user_pass, user_nicename, user_email = row</span><span>
+</span><span>            u = user.User(request,</span><span>
+</span><span>                          auth_username=username,</span><span>
+</span><span>                          auth_method=self.name,</span><span>
+</span><span>                          auth_attribs=(</span><span style="color:#d69d85;">&#39;name&#39;</span><span>, </span><span style="color:#d69d85;">&#39;password&#39;</span><span>, </span><span style="color:#d69d85;">&#39;email&#39;</span><span>, </span><span style="color:#d69d85;">&#39;aliasname&#39;</span><span>))</span><span>
+</span><span>            u.name = user_login</span><span>
+</span><span>            u.aliasname = user_nicename</span><span>
+</span><span>            u.email = user_email</span><span>
+</span><span>            </span><span style="color:#569cd6;">if </span><span>self.autocreate:</span><span>
+</span><span>                u.create_or_update(</span><span style="color:#569cd6;">True</span><span>)</span><span>
+</span><span>            </span><span style="color:#569cd6;">return </span><span>ContinueLogin(u)</span><span>
+</span><span>
+</span><span>        </span><span style="color:#569cd6;">return </span><span>ContinueLogin(user_obj, _(</span><span style="color:#d69d85;">&quot;Invalid username or password.&quot;</span><span>))</span><span>
+</span><span>
+</span><span>    </span><span style="color:#569cd6;">def </span><span>verifyUser(self, username=</span><span style="color:#d69d85;">&#39;&#39;</span><span>, password=</span><span style="color:#d69d85;">&#39;&#39;</span><span>):</span><span>
+</span><span>        </span><span style="color:#608b4e;">&quot;&quot;&quot;Verify a username and password with a Wordpress database.</span><span style="color:#608b4e;">
 </span><span style="color:#608b4e;">
-        This implementation assumes passwords are hashed using bcrypt, and are</span><span style="color:#608b4e;">
-        PHPass compatible.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        This implementation assumes passwords are hashed using bcrypt, and are</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        PHPass compatible.</span><span style="color:#608b4e;">
 </span><span style="color:#608b4e;">
-        username -- Name of Wordpress user.</span><span style="color:#608b4e;">
-        password -- Password of Wordpress user.</span><span style="color:#608b4e;">
-        &quot;&quot;&quot;</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-        </span><span style="color:#9b9b9b;">import </span><span style="color:#dcdcdc;">MySQLdb</span><span style="color:#dcdcdc;">
-        db = MySQLdb.connect(host=self.db_host,</span><span style="color:#dcdcdc;">
-                             db=self.db_name,</span><span style="color:#dcdcdc;">
-                             user=self.db_user,</span><span style="color:#dcdcdc;">
-                             passwd=self.db_passwd)</span><span style="color:#dcdcdc;">
-        c = db.cursor()</span><span style="color:#dcdcdc;">
-        q = </span><span style="color:#d69d85;">&quot;</span><span style="color:#569cd6;">SELECT</span><span style="color:#e3bbab;"> user_login, user_pass, user_nicename, user_email</span><span style="color:#ff3333;">
-             </span><span style="color:#dcdcdc;">FROM wp_users WHERE user_login=</span><span style="color:#d69d85;">&#39;</span><span style="color:#b4cea8;">%s</span><span style="color:#d69d85;">&#39;&quot; % (username)</span><span style="color:#ff3333;">
-        </span><span style="color:#dcdcdc;">result = c.execute(q)</span><span style="color:#dcdcdc;">
-        </span><span style="color:#569cd6;">if </span><span style="color:#dcdcdc;">result == </span><span style="color:#b5cea8;">1</span><span style="color:#dcdcdc;">:</span><span style="color:#dcdcdc;">
-            row = c.fetchone()</span><span style="color:#dcdcdc;">
-            </span><span style="color:#9b9b9b;">import </span><span style="color:#dcdcdc;">phpass  </span><span style="color:#608b4e;"># A bit ugly, but the module is only needed here</span><span style="color:#608b4e;">
-            </span><span style="color:#569cd6;">if </span><span style="color:#dcdcdc;">row </span><span style="color:#569cd6;">and </span><span style="color:#dcdcdc;">(row[</span><span style="color:#b5cea8;">1</span><span style="color:#dcdcdc;">] == phpass.crypt_private(password, row[</span><span style="color:#b5cea8;">1</span><span style="color:#dcdcdc;">])):</span><span style="color:#dcdcdc;">
-                result = row</span><span style="color:#dcdcdc;">
-            </span><span style="color:#569cd6;">else</span><span style="color:#dcdcdc;">:</span><span style="color:#dcdcdc;">
-                result = </span><span style="color:#569cd6;">None</span><span style="color:#dcdcdc;">
-        </span><span style="color:#569cd6;">else</span><span style="color:#dcdcdc;">:</span><span style="color:#dcdcdc;">
-            result = </span><span style="color:#569cd6;">None</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-        c.close()</span><span style="color:#dcdcdc;">
-        </span><span style="color:#569cd6;">return </span><span style="color:#dcdcdc;">result</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-</span><span style="color:#569cd6;">class </span><span style="color:#dcdcdc;">Config(</span><span style="color:#4ec9b0;">DefaultConfig</span><span style="color:#dcdcdc;">):</span><span style="color:#dcdcdc;">
+</span><span style="color:#608b4e;">        username -- Name of Wordpress user.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        password -- Password of Wordpress user.</span><span style="color:#608b4e;">
+</span><span style="color:#608b4e;">        &quot;&quot;&quot;</span><span>
+</span><span>
+</span><span>        </span><span style="color:#9b9b9b;">import </span><span>MySQLdb</span><span>
+</span><span>        db = MySQLdb.connect(host=self.db_host,</span><span>
+</span><span>                             db=self.db_name,</span><span>
+</span><span>                             user=self.db_user,</span><span>
+</span><span>                             passwd=self.db_passwd)</span><span>
+</span><span>        c = db.cursor()</span><span>
+</span><span>        q = </span><span style="color:#d69d85;">&quot;</span><span style="color:#569cd6;">SELECT</span><span style="color:#e3bbab;"> user_login, user_pass, user_nicename, user_email</span><span style="color:#ff3333;">
+</span><span>             FROM wp_users WHERE user_login=</span><span style="color:#d69d85;">&#39;</span><span style="color:#b4cea8;">%s</span><span style="color:#d69d85;">&#39;&quot; % (username)</span><span style="color:#ff3333;">
+</span><span>        result = c.execute(q)</span><span>
+</span><span>        </span><span style="color:#569cd6;">if </span><span>result == </span><span style="color:#b5cea8;">1</span><span>:</span><span>
+</span><span>            row = c.fetchone()</span><span>
+</span><span>            </span><span style="color:#9b9b9b;">import </span><span>phpass  </span><span style="color:#608b4e;"># A bit ugly, but the module is only needed here</span><span style="color:#608b4e;">
+</span><span>            </span><span style="color:#569cd6;">if </span><span>row </span><span style="color:#569cd6;">and </span><span>(row[</span><span style="color:#b5cea8;">1</span><span>] == phpass.crypt_private(password, row[</span><span style="color:#b5cea8;">1</span><span>])):</span><span>
+</span><span>                result = row</span><span>
+</span><span>            </span><span style="color:#569cd6;">else</span><span>:</span><span>
+</span><span>                result = </span><span style="color:#569cd6;">None</span><span>
+</span><span>        </span><span style="color:#569cd6;">else</span><span>:</span><span>
+</span><span>            result = </span><span style="color:#569cd6;">None</span><span>
+</span><span>
+</span><span>        c.close()</span><span>
+</span><span>        </span><span style="color:#569cd6;">return </span><span>result</span><span>
+</span><span>
+</span><span style="color:#569cd6;">class </span><span>Config(</span><span style="color:#4ec9b0;">DefaultConfig</span><span>):</span><span>
 </span><span style="color:#608b4e;">#~ class FarmConfig(DefaultConfig):</span><span style="color:#608b4e;">
-</span><span style="color:#dcdcdc;">
-    auth = [WordpressAuth(autocreate=</span><span style="color:#569cd6;">True</span><span style="color:#dcdcdc;">,</span><span style="color:#dcdcdc;">
-                          db_host=</span><span style="color:#d69d85;">&#39;localhost&#39;</span><span style="color:#dcdcdc;">, db_name=</span><span style="color:#d69d85;">&#39;wpdb&#39;</span><span style="color:#dcdcdc;">,</span><span style="color:#dcdcdc;">
-                          db_user=</span><span style="color:#d69d85;">&#39;wpuser&#39;</span><span style="color:#dcdcdc;">, db_passwd=</span><span style="color:#d69d85;">&#39;wppass&#39;</span><span style="color:#dcdcdc;">)]</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
-    </span><span style="color:#608b4e;"># don&#39;t let the user change these, but show them</span><span style="color:#608b4e;">
-    </span><span style="color:#dcdcdc;">user_form_disable = [</span><span style="color:#d69d85;">&#39;name&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;aliasname&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;email&#39;</span><span style="color:#dcdcdc;">]</span><span style="color:#dcdcdc;">
-    </span><span style="color:#608b4e;"># remove completely</span><span style="color:#608b4e;">
-    </span><span style="color:#dcdcdc;">user_form_remove = [</span><span style="color:#d69d85;">&#39;password&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;password2&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;css_url&#39;</span><span style="color:#dcdcdc;">,</span><span style="color:#dcdcdc;">
-                        </span><span style="color:#d69d85;">&#39;create&#39;</span><span style="color:#dcdcdc;">, </span><span style="color:#d69d85;">&#39;account_sendmail&#39;</span><span style="color:#dcdcdc;">,</span><span style="color:#d69d85;">&#39;jid&#39;</span><span style="color:#dcdcdc;">]</span><span style="color:#dcdcdc;">
-    </span><span style="color:#608b4e;"># Is this necessary?</span><span style="color:#608b4e;">
-    </span><span style="color:#dcdcdc;">user_autocreate = </span><span style="color:#569cd6;">True</span><span style="color:#dcdcdc;">
+</span><span>
+</span><span>    auth = [WordpressAuth(autocreate=</span><span style="color:#569cd6;">True</span><span>,</span><span>
+</span><span>                          db_host=</span><span style="color:#d69d85;">&#39;localhost&#39;</span><span>, db_name=</span><span style="color:#d69d85;">&#39;wpdb&#39;</span><span>,</span><span>
+</span><span>                          db_user=</span><span style="color:#d69d85;">&#39;wpuser&#39;</span><span>, db_passwd=</span><span style="color:#d69d85;">&#39;wppass&#39;</span><span>)]</span><span>
+</span><span>
+</span><span>    </span><span style="color:#608b4e;"># don&#39;t let the user change these, but show them</span><span style="color:#608b4e;">
+</span><span>    user_form_disable = [</span><span style="color:#d69d85;">&#39;name&#39;</span><span>, </span><span style="color:#d69d85;">&#39;aliasname&#39;</span><span>, </span><span style="color:#d69d85;">&#39;email&#39;</span><span>]</span><span>
+</span><span>    </span><span style="color:#608b4e;"># remove completely</span><span style="color:#608b4e;">
+</span><span>    user_form_remove = [</span><span style="color:#d69d85;">&#39;password&#39;</span><span>, </span><span style="color:#d69d85;">&#39;password2&#39;</span><span>, </span><span style="color:#d69d85;">&#39;css_url&#39;</span><span>,</span><span>
+</span><span>                        </span><span style="color:#d69d85;">&#39;create&#39;</span><span>, </span><span style="color:#d69d85;">&#39;account_sendmail&#39;</span><span>,</span><span style="color:#d69d85;">&#39;jid&#39;</span><span>]</span><span>
+</span><span>    </span><span style="color:#608b4e;"># Is this necessary?</span><span style="color:#608b4e;">
+</span><span>    user_autocreate = </span><span style="color:#569cd6;">True</span><span>
 </span></code></pre>
-<p><a href="https://bjornruud.net/blog/2009/authorize-moinmoin-users-with-wordpress-db/wikiconfig-wordpress-auth.zip">Download example wikiconfig.py</a></p>
+<p><a href="bjornruud.net/blog/2009/authorize-moinmoin-users-with-wordpress-db/wikiconfig-wordpress-auth.zip">Download example wikiconfig.py</a></p>
 <p>The authorization plugins included with MoinMoin are good examples of what you can do, so study them if you want to customize something or write your own.</p>
 <p>If we wanted a single sign-on solution we would probably have to use the WordPress cookie in the authentication process. For security we should then store the WordPress session ID in the database and authenticate by comparing that with the session ID in the cookie.</p>
 

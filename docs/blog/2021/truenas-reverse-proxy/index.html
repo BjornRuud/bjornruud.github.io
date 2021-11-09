@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<!-- Enable responsiveness on mobile devices-->
+<!-- viewport-fit=cover is to support iPhone X rounded corners and notch in landscape-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+
+<title>bjornruud.net</title>
+
+<link rel="stylesheet" href="/print.css" media="print">
+<link rel="stylesheet" href="/main.css">
+
+
+<link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+
+
+  
+</head>
+
+<body>
+  <div class="flex-container">
+    <div class="header-container">
+      <div class="header">
+        
+        <div class="header-title">
+  <a href="/">bjornruud.net</a>
+</div>
+<div class="header-subtitle">
+  <a href="/atom.xml">rss</a> |
+  <a href="/blog/archive/">archive</a>
+</div>
+
+        
+      </div>
+    </div>
+
+    <div class="content-container">
+      <div class="content">
+        
+<article>
+  <div class="date">2021-11-01</div>
+  <div class="post">
+    <h1 id="reverse-proxy-on-truenas">Reverse Proxy on TrueNAS</h1>
+<p>On my <a rel="noopener" target="_blank" href="https://www.truenas.com/">TrueNAS</a> server I run two application servers in jails. In order to access them from outside my local network I could just forward specific ports from the WAN side of my router to the IP addresses of the servers, but this is an inelegant solution. It would require that I specify the port in the address and I would have to manage certificates for each application server. What I want is to use a subdomain as address like <code>app.example.com</code>. I also want TLS encryption without having to deal with certificates for each subdomain and server.</p>
+<p>Both of these requirements can be achieved by using a reverse proxy, so let's get started.</p>
+<p>This guide is heavily based on <a rel="noopener" target="_blank" href="https://www.samueldowling.com/2020/01/18/nginx-reverse-proxy-freenas-ssl-tls/">Samuel Dowling's guide &quot;How to set up an nginx reverse proxy with SSL termination in FreeNAS&quot;</a>, so go read that first. Instead of <a rel="noopener" target="_blank" href="https://certbot.eff.org/"><code>certbot</code></a> I use <a rel="noopener" target="_blank" href="https://github.com/acmesh-official/acme.sh"><code>acme.sh</code></a> for certificate management, and I set the SSL config to be used globally instead of per domain since this reverse proxy only manages a single domain.</p>
+<h2 id="jail-for-nginx">Jail for nginx</h2>
+<p>There is no built-in solution or plugin for reverse proxy functionality on TrueNAS, so we roll our own using <a rel="noopener" target="_blank" href="https://nginx.org/en/">nginx</a>. First go to the &quot;Jails&quot; section in TrueNAS and create a new jail. I recommend enabling <code>allow_raw_sockets</code> under &quot;Jail Properties&quot; so it's possible to ping and traceroute the server. You can also create the jail using the <code>iocage</code> command in a terminal.</p>
+<p>The new jail has no services running so the next step is to make administration and configuration a bit easier by adding a user and enabling the sshd service. An alternative is to log in to the TrueNAS server via a terminal and use the <code>jexec</code> command to enter the jail, but I like having the jail servers self-contained.</p>
+<p>Go to the Jail section in TrueNAS, expand your newly created jail and press the Shell button (or use <code>jexec</code>). You now have a shell with root access.</p>
+<p>Type <code>adduser</code> and follow the instructions. Name the user whatever is suitable. When asked about additional groups, add the user to the <code>wheel</code> group. This enables use of the <code>su</code> and <code>sudo</code> commands.</p>
+<p>Now enable the <code>sshd</code> service and start it:</p>
+<pre data-lang="sh" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-sh "><code class="language-sh" data-lang="sh"><span>$ sysrc sshd_enable=YES
+</span><span>$ service sshd start
+</span><span>
+</span><span style="color:#608b4e;"># Verify sshd is running
+</span><span>$ service sshd status
+</span></code></pre>
+<p>You can now log in to the server with the user created, and run commands as root with <code>sudo</code> and switch to the root user using <code>su -</code>.</p>
+<h2 id="nginx-and-ssl-certificate">nginx and SSL certificate</h2>
+<p>Next install nginx. For SSL certificate management install <code>acme.sh</code>. All commands are assumed to be run as root.</p>
+<pre data-lang="sh" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-sh "><code class="language-sh" data-lang="sh"><span>$ pkg update
+</span><span>$ pkg install nginx
+</span><span>$ pkg install acme.sh
+</span></code></pre>
+<p>Since we want a single certificate for all subdomains we'll need to issue a wildcard certificate:</p>
+<pre data-lang="sh" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-sh "><code class="language-sh" data-lang="sh"><span>$ acme.sh --register-account -m name@example.com
+</span><span>$ acme.sh --issue --dns dns_yourprovider -d </span><span style="color:#d69d85;">&#39;*.example.com&#39;
+</span></code></pre>
+<p>Replace <code>dns_yourprovider</code> with the plugin name of your DNS provider. Follow the instructions from your provider on how to enable API access. You will at least have to create some sort of API key. If you can't find your provider plugin <a rel="noopener" target="_blank" href="https://github.com/acmesh-official/acme.sh/wiki/dnsapi">in the list</a> then you can <a rel="noopener" target="_blank" href="https://github.com/acmesh-official/acme.sh#9-use-dns-manual-mode">issue a certificate manually</a> but you will then lose the ability to do automatic updates of the certificate using <code>acme.sh</code>.</p>
+<p>Note that the files downloaded using <code>acme.sh</code> should <em>not</em> be used directly. Install them somewhere the nginx config can find them:</p>
+<pre data-lang="sh" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-sh "><code class="language-sh" data-lang="sh"><span>$ mkdir /usr/local/etc/nginx/domains
+</span><span>$ acme.sh --install-cert -d </span><span style="color:#d69d85;">&quot;*.example.com&quot; </span><span>\
+</span><span>--cert-file /usr/local/etc/nginx/domains/example.com/cert.pem \
+</span><span>--key-file /usr/local/etc/nginx/domains/example.com/key.pem \
+</span><span>--fullchain-file /usr/local/etc/nginx/domains/example.com/fullchain.pem \
+</span><span>--reloadcmd </span><span style="color:#d69d85;">&quot;service nginx reload&quot;
+</span></code></pre>
+<h2 id="domain-configuration">Domain configuration</h2>
+<p>Mozilla has a nice <a rel="noopener" target="_blank" href="https://ssl-config.mozilla.org/">web page for generating the SSL configuration</a>. A modern configuration will look something like this:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span># generated 2021-10-31, Mozilla Guideline v5.6, nginx 1.20.1, OpenSSL 1.1.1l, modern configuration
+</span><span># https://ssl-config.mozilla.org/#server=nginx&amp;version=1.20.1&amp;config=modern&amp;openssl=1.1.1l&amp;guideline=5.6
+</span><span>server {
+</span><span>    listen 80 default_server;
+</span><span>    listen [::]:80 default_server;
+</span><span>
+</span><span>    location / {
+</span><span>        return 301 https://$host$request_uri;
+</span><span>    }
+</span><span>}
+</span><span>
+</span><span>server {
+</span><span>    listen 443 ssl http2;
+</span><span>    listen [::]:443 ssl http2;
+</span><span>
+</span><span>    ssl_certificate /path/to/signed_cert_plus_intermediates;
+</span><span>    ssl_certificate_key /path/to/private_key;
+</span><span>    ssl_session_timeout 1d;
+</span><span>    ssl_session_cache shared:MozSSL:10m;  # about 40000 sessions
+</span><span>    ssl_session_tickets off;
+</span><span>
+</span><span>    # modern configuration
+</span><span>    ssl_protocols TLSv1.3;
+</span><span>    ssl_prefer_server_ciphers off;
+</span><span>
+</span><span>    # HSTS (ngx_http_headers_module is required) (63072000 seconds)
+</span><span>    add_header Strict-Transport-Security &quot;max-age=63072000&quot; always;
+</span><span>
+</span><span>    # OCSP stapling
+</span><span>    ssl_stapling on;
+</span><span>    ssl_stapling_verify on;
+</span><span>
+</span><span>    # verify chain of trust of OCSP response using Root CA and Intermediate certs
+</span><span>    ssl_trusted_certificate /path/to/root_CA_cert_plus_intermediates;
+</span><span>
+</span><span>    # replace with the IP address of your resolver
+</span><span>    resolver 127.0.0.1;
+</span><span>}
+</span></code></pre>
+<p>Copy and paste the configuration to <code>/usr/local/etc/nginx/snippets/ssl-params.conf</code>. We'll also need to configure proxy behaviour. Copy the following to <code>/usr/local/etc/nginx/snippets/proxy-params.conf</code>.</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>proxy_set_header Host $host;
+</span><span>proxy_set_header X-Real-IP $remote_addr;
+</span><span>proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+</span><span>proxy_set_header X-Forwarded-Proto $scheme;
+</span><span>proxy_set_header X-Forwarded-Host $server_name;
+</span><span>proxy_set_header X-Forwarded-Ssl on;
+</span><span>proxy_set_header Upgrade $http_upgrade;
+</span><span>proxy_set_header Connection &quot;upgrade&quot;;
+</span><span>proxy_http_version 1.1;
+</span></code></pre>
+<p>Now we need a configuration for the subdomain. Put the following in <code>/usr/local/etc/nginx/domains/app.example.com.conf</code>:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>server {
+</span><span>    listen 443 ssl http2;
+</span><span>
+</span><span>    server_name app.example.com;
+</span><span>    access_log /var/log/nginx/app.example.com.access.log;
+</span><span>    error_log /var/log/nginx/app.example.com.error.log;
+</span><span>
+</span><span>    location / {
+</span><span>        include snippets/proxy-params.conf;
+</span><span>        proxy_pass https://name-or-ip-address;
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<p>The <code>proxy_pass</code> setting is the forwarding target on the internal network. It can be an address or IP with optional port. If you need additional subdomains just add similar files for each one.</p>
+<p>The last piece of the puzzle is the nginx configuration itself. Make a backup of the existing <code>/usr/local/etc/nginx/nginx.conf</code> and replace or modify it with the following:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>worker_processes 1;
+</span><span>
+</span><span>events {
+</span><span>    worker_connections 1024;
+</span><span>}
+</span><span>
+</span><span>http {
+</span><span>    include mime.types;
+</span><span>    default_type application/octet-stream;
+</span><span>    sendfile on;
+</span><span>    keepalive_timeout 65;
+</span><span>    server_tokens off;
+</span><span>
+</span><span>    include &quot;snippets/ssl-params.conf&quot;;
+</span><span>    include &quot;domains/*.conf&quot;;
+</span><span>}
+</span></code></pre>
+<p>Reload nginx to enable the configuration.</p>
+<pre data-lang="sh" style="background-color:#1e1e1e;color:#dcdcdc;" class="language-sh "><code class="language-sh" data-lang="sh"><span>$ service nginx reload
+</span></code></pre>
+<p>If the reverse proxy is behind NAT you will have to forward port 443 (HTTPS) from the WAN side to the proxy server. You can forward port 80 (HTTP) too for convenience if you want, but with the configuration we just wrote it will just get redirected to port 443.</p>
+
+  </div>
+</article>
+
+      </div>
+    </div>
+
+    <div class="footer-container">
+      <div class="footer">
+        
+        Bjørn Olav Ruud &copy; 2021<br/>
+<a href="https://github.com/BjornRuud">GitHub</a> | <a href="https://www.linkedin.com/in/bjornruud/">LinkedIn</a> | <a href="https://twitter.com/BjornRuud">Twitter</a><br/>
+Built with <a href="https://www.getzola.org" target="_blank">Zola</a>
+
+        
+      </div>
+    </div>
+  </div>
+
+  <script data-goatcounter="https://bjornruud.goatcounter.com/count"
+  async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

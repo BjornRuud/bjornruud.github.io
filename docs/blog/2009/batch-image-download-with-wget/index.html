@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="/main.css">
 
 
-<link rel="alternate" type="application/rss+xml" title="RSS" href="/rss.xml">
+<link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
 
 
   
@@ -29,7 +29,7 @@
   <a href="/">bjornruud.net</a>
 </div>
 <div class="header-subtitle">
-  <a href="/rss.xml">rss</a> |
+  <a href="/atom.xml">rss</a> |
   <a href="/blog/archive/">archive</a>
 </div>
 
@@ -44,45 +44,41 @@
   <div class="date">2009-10-17</div>
   <div class="post">
     <h1 id="batch-image-download-with-wget">Batch Image Download With wget</h1>
-<p><a href="http://www.gnu.org/software/wget/">wget</a> is often used to download single files from the command line, but it can also mirror a website locally or just download part of a website. By specifying the right parameters we can make wget act as batch downloader, retrieving only the files we want.</p>
+<p><a rel="noopener" target="_blank" href="http://www.gnu.org/software/wget/">wget</a> is often used to download single files from the command line, but it can also mirror a website locally or just download part of a website. By specifying the right parameters we can make wget act as batch downloader, retrieving only the files we want.</p>
 <p>In this example we assume a website with a sequence of pages, where each page links to the next in the sequence and they all contain a JPEG image. We want to download all the images to the current directory. The following command line does this:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ wget --recursive --level=inf --no-directories --no-parent --accept *.jpg URL</span><span style="color:#dcdcdc;">
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ wget --recursive --level=inf --no-directories --no-parent --accept *.jpg URL</span><span>
 </span></code></pre>
 <p>Or if you prefer, the shorter but more obscure:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ wget -r -l inf -nd -np -A *.jpg URL</span><span style="color:#dcdcdc;">
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ wget -r -l inf -nd -np -A *.jpg URL</span><span>
 </span></code></pre>
 <p>Let’s take a look at the parameters:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">--recursive</span><span style="color:#dcdcdc;">
-    Makes wget follow links from the start page.</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
---level=inf</span><span style="color:#dcdcdc;">
-    This allows for infinite recursion. In combination with another option that limits the</span><span style="color:#dcdcdc;">
-    recursion depth, like –no-parent, we don’t need to know the necessary depth. Otherwise</span><span style="color:#dcdcdc;">
-    you should specify a number to set a limit.</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
---no-directories</span><span style="color:#dcdcdc;">
-    Default behaviour is to recreate the directory structure of the website. This option</span><span style="color:#dcdcdc;">
-    makes wget put all files in the same directory.</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
---no-parent</span><span style="color:#dcdcdc;">
-    Do not follow links to pages above the starting page in the hierarchy.</span><span style="color:#dcdcdc;">
-</span><span style="color:#dcdcdc;">
---accept *.jpg</span><span style="color:#dcdcdc;">
-    Here we specify what kind of file to download. The parameter can be a comma-separated list.</span><span style="color:#dcdcdc;">
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>--recursive</span><span>
+</span><span>    Makes wget follow links from the start page.</span><span>
+</span><span>
+</span><span>--level=inf</span><span>
+</span><span>    This allows for infinite recursion. In combination with another option that limits the</span><span>
+</span><span>    recursion depth, like –no-parent, we don’t need to know the necessary depth. Otherwise</span><span>
+</span><span>    you should specify a number to set a limit.</span><span>
+</span><span>
+</span><span>--no-directories</span><span>
+</span><span>    Default behaviour is to recreate the directory structure of the website. This option</span><span>
+</span><span>    makes wget put all files in the same directory.</span><span>
+</span><span>
+</span><span>--no-parent</span><span>
+</span><span>    Do not follow links to pages above the starting page in the hierarchy.</span><span>
+</span><span>
+</span><span>--accept *.jpg</span><span>
+</span><span>    Here we specify what kind of file to download. The parameter can be a comma-separated list.</span><span>
 </span></code></pre>
 <p>For other options and details about those listed here, check the wget man page.</p>
 <hr />
 <p>In one scenario I used wget the files had to be zero padded (like <code>img-01.jpg</code> instead of <code>img-1.jpg</code>). For a single directory this did the job (for filenames with two digits):</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ rename &#39;s/-([0-9])\./-0$1\./&#39; *.jpg</span><span style="color:#dcdcdc;">
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ rename &#39;s/-([0-9])\./-0$1\./&#39; *.jpg</span><span>
 </span></code></pre>
 <p>For a directory tree this was used:</p>
-<pre style="background-color:#1e1e1e;">
-<code><span style="color:#dcdcdc;">$ find . &quot;*.jpg&quot; -type f -print0 | xargs --null rename &#39;s/-([0-9])\./-0$1\./&#39;</span><span style="color:#dcdcdc;">
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>$ find . &quot;*.jpg&quot; -type f -print0 | xargs --null rename &#39;s/-([0-9])\./-0$1\./&#39;</span><span>
 </span></code></pre>
+
   </div>
 </article>
 
