@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<!-- Enable responsiveness on mobile devices-->
+<!-- viewport-fit=cover is to support iPhone X rounded corners and notch in landscape-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+
+<title>bjornruud.net</title>
+
+<link rel="stylesheet" href="/print.css" media="print">
+<link rel="stylesheet" href="/main.css">
+
+
+<link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+
+
+  
+</head>
+
+<body>
+  <div class="flex-container">
+    <div class="header-container">
+      <div class="header">
+        
+        <div class="header-title">
+  <a href="/">bjornruud.net</a>
+</div>
+<div class="header-subtitle">
+  <a href="/atom.xml">rss</a> |
+  <a href="/blog/archive/">archive</a>
+</div>
+
+        
+      </div>
+    </div>
+
+    <div class="content-container">
+      <div class="content">
+        
+<article>
+  <div class="date">2022-02-24</div>
+  <div class="post">
+    <h1 id="replacing-dnsmasq-dns-with-knot-resolver-on-openwrt">Replacing dnsmasq DNS with knot-resolver on OpenWRT</h1>
+<p><a rel="noopener" target="_blank" href="https://openwrt.org/">OpenWRT</a> uses <a rel="noopener" target="_blank" href="https://dnsmasq.org/">dnsmasq</a> for DHCP and DNS services, and the DNS service caused some problems for me:</p>
+<ul>
+<li>Latency when forwarding DNS requests is often higher than direct lookup.</li>
+<li>Does not support DNS-over-TLS (DoT).</li>
+<li>Forwarding to <a rel="noopener" target="_blank" href="https://dnsprivacy.org/dns_privacy_daemon_-_stubby/">stubby</a> adds DoT support but frequently has very high latency, and sometimes just fails completely.</li>
+</ul>
+<p>Installing <a rel="noopener" target="_blank" href="https://www.knot-resolver.cz/">knot-resolver</a> fixes these issues, but it has to be installed manually and I can't replace dnsmasq since I need the DHCP service so some configuration is needed.</p>
+<h2 id="installation">Installation</h2>
+<p>First update the package index. In LUCI go to <code>System -&gt; Software</code> and press <code>Update lists</code>, or in a terminal:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>opkg update
+</span></code></pre>
+<p>Search for and install the <code>knot-resolver</code> package in LUCI, or:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>opkg install knot-resolver
+</span></code></pre>
+<p>Stop and disable the service until the configuration is in place. In LUCI go to <code>System -&gt; Startup</code> and stop and disable the <code>kresd</code> service, or:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>service kresd stop
+</span><span>service kresd disable
+</span></code></pre>
+<h2 id="configuration">Configuration</h2>
+<p>First disable DNS on dnsmasq. In LUCI go to <code>Network -&gt; DHCP and DNS -&gt; Advanced Settings</code> and set the <code>DNS server port</code> to 0. Press <code>Save &amp; Apply</code> and check that nothing is listening on port 53 anymore:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>netstat -tlnu
+</span></code></pre>
+<p>Next create a <code>kresd</code> configuration file in <code>/etc/knot-resolver/kresd.conf</code>:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>log_target(&#39;syslog&#39;)
+</span><span>
+</span><span>modules = {
+</span><span>  &#39;policy&#39;,
+</span><span>  &#39;hints &gt; iterate&#39;,
+</span><span>  &#39;serve_stale &lt; cache&#39;,
+</span><span>  &#39;workarounds &lt; iterate&#39;,
+</span><span>  &#39;stats&#39;,
+</span><span>  &#39;predict&#39;
+</span><span>}
+</span><span>
+</span><span>net.ipv6 = false
+</span><span>net.listen(&#39;127.0.0.1&#39;, 53, { kind = &#39;dns&#39; })
+</span><span>net.listen(&#39;127.0.0.1&#39;, 853, { kind = &#39;tls&#39; })
+</span><span>net.listen(&#39;10.0.0.1&#39;, 53, { kind = &#39;dns&#39; })
+</span><span>net.listen(&#39;10.0.0.1&#39;, 853, { kind = &#39;tls&#39; })
+</span><span>
+</span><span>cache.open(50 * MB, &#39;lmdb:///tmp/kresd/cache&#39;)
+</span><span>
+</span><span>hints.add_hosts(&#39;/etc/knot-resolver/hosts.custom&#39;)
+</span><span>
+</span><span>policy.add(policy.all(policy.TLS_FORWARD({
+</span><span>    { &#39;1.1.1.1&#39;, hostname=&#39;cloudflare-dns.com&#39; },
+</span><span>    { &#39;1.0.0.1&#39;, hostname=&#39;cloudflare-dns.com&#39; }
+</span><span>})))
+</span><span>
+</span><span>predict.config({ window = 30, period = 48 })
+</span></code></pre>
+<p>Let's go through the settings. For details refer to <a rel="noopener" target="_blank" href="https://knot-resolver.readthedocs.io/en/stable/">the documentation</a>.</p>
+<ul>
+<li><code>log_target('syslog')</code>: The default logging target is stdout, but I want messages to appear in the syslog together with the rest of the services.</li>
+<li><code>modules</code>: All the imported modules necessary to enable the settings used.</li>
+<li><code>net.ipv6 = false</code>: I don't need IPv6 support and the default is true. Remove this if you need to add IPv6 addresses.</li>
+<li><code>net.listen(...)</code>: All the interfaces and ports to listen for DNS requests on. Replace the address with whatever the LAN address of your router is.</li>
+<li><code>cache.open(...)</code>: Use a relatively small cache on non-persistent storage. Best-practice is to mount a dedicated <code>tmpfs</code> if you want non-persistence, but since <code>/tmp</code> is already mounted using <code>tmpfs</code> and has plenty of space I simply use that.</li>
+<li><code>hints.add_hosts(...)</code>: A regular hosts file with all the static mappings on the network. If your system uses <code>/etc/hosts</code> it could point to that. Delete this line if you don't need static mappings.</li>
+<li><code>policy.TLS_FORWARD(...)</code>: This is where DNS forwarding using TLS is enabled for all lookups. The example uses Cloudflare servers but any DNS server supporting DoT can be used.</li>
+<li><code>predict.config(...)</code>: The prediction module is entirely optional. It refreshes cache entries based on usage patterns, time, or both depending on configuration.</li>
+</ul>
+<h3 id="service-configuration-hack">Service configuration hack</h3>
+<p>The <code>knot-resolver</code> package doesn't integrate with <code>uci</code> and I didn't have time to create a clean solution, so I just edited the <code>/etc/init.d/kresd</code> script directly to use the custom configuration and disable the autogenerated configuration file:</p>
+<ul>
+<li>Edit <code>CONFIGFILE</code> to point to <code>/etc/knot-resolver/kresd.conf</code>.</li>
+<li>Comment out <code>init_header</code>, <code>init_rootkey</code> and any <code>-a</code> parameter lines in the <code>start_service()</code> function.</li>
+</ul>
+<p>Remember that if you upgrade the package you might have to reapply these changes.</p>
+<p>Now all that remains is to enable and start the service, and check that it is listening on all configured interfaces and ports:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>service kresd enable
+</span><span>service kresd start
+</span><span>netstat -tlnu
+</span></code></pre>
+<p>Check that DNS works from a computer on the network:</p>
+<pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>dig example.com @10.0.0.1
+</span></code></pre>
+<p>Since DNS is disabled in dnsmasq it doesn't advertise any DNS server through DHCP anymore. Remedy that by adding a custom DHCP setting. In LUCI go to <code>Network -&gt; Interfaces</code> and edit the interface for your LAN. Then go to <code>DHCP Server -&gt; Advanced Settings</code> and add the option <code>6,10.0.0.1</code> to <code>DHCP-Options</code>. Save and apply and everything should work exactly as before, with all DNS lookups being encrypted and done by knot-resolver instead of dnsmasq.</p>
+<p>You can test if TLS is used here:</p>
+<p><a rel="noopener" target="_blank" href="https://1.1.1.1/help/">https://1.1.1.1/help/</a></p>
+
+  </div>
+</article>
+
+      </div>
+    </div>
+
+    <div class="footer-container">
+      <div class="footer">
+        
+        Bjørn Olav Ruud &copy; 2022<br/>
+<a href="https://github.com/BjornRuud">GitHub</a> | <a href="https://www.linkedin.com/in/bjornruud/">LinkedIn</a> | <a href="https://twitter.com/BjornRuud">Twitter</a><br/>
+Built with <a href="https://www.getzola.org" target="_blank">Zola</a>
+
+        
+      </div>
+    </div>
+  </div>
+
+  <script data-goatcounter="https://bjornruud.goatcounter.com/count"
+  async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

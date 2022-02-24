@@ -4,8 +4,97 @@
 	<link href="bjornruud.net/atom.xml" rel="self" type="application/atom+xml"/>
   <link href="bjornruud.net"/>
 	<generator uri="https://www.getzola.org/">Zola</generator>
-	<updated>2021-11-01T00:00:00+00:00</updated>
+	<updated>2022-02-24T00:00:00+00:00</updated>
 	<id>bjornruud.net/atom.xml</id>
+	<entry xml:lang="en">
+		<title>Replacing dnsmasq DNS with knot-resolver on OpenWRT</title>
+		<published>2022-02-24T00:00:00+00:00</published>
+		<updated>2022-02-24T00:00:00+00:00</updated>
+		<link href="bjornruud.net/blog/2022/replacing-dnsmasq-dns-with-knot-resolver-on-openwrt/" type="text/html"/>
+		<id>bjornruud.net/blog/2022/replacing-dnsmasq-dns-with-knot-resolver-on-openwrt/</id>
+		<content type="html">&lt;h1 id=&quot;replacing-dnsmasq-dns-with-knot-resolver-on-openwrt&quot;&gt;Replacing dnsmasq DNS with knot-resolver on OpenWRT&lt;&#x2F;h1&gt;
+&lt;p&gt;&lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;openwrt.org&#x2F;&quot;&gt;OpenWRT&lt;&#x2F;a&gt; uses &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;dnsmasq.org&#x2F;&quot;&gt;dnsmasq&lt;&#x2F;a&gt; for DHCP and DNS services, and the DNS service caused some problems for me:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Latency when forwarding DNS requests is often higher than direct lookup.&lt;&#x2F;li&gt;
+&lt;li&gt;Does not support DNS-over-TLS (DoT).&lt;&#x2F;li&gt;
+&lt;li&gt;Forwarding to &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;dnsprivacy.org&#x2F;dns_privacy_daemon_-_stubby&#x2F;&quot;&gt;stubby&lt;&#x2F;a&gt; adds DoT support but frequently has very high latency, and sometimes just fails completely.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Installing &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.knot-resolver.cz&#x2F;&quot;&gt;knot-resolver&lt;&#x2F;a&gt; fixes these issues, but it has to be installed manually and I can&#x27;t replace dnsmasq since I need the DHCP service so some configuration is needed.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;installation&quot;&gt;Installation&lt;&#x2F;h2&gt;
+&lt;p&gt;First update the package index. In LUCI go to &lt;code&gt;System -&amp;gt; Software&lt;&#x2F;code&gt; and press &lt;code&gt;Update lists&lt;&#x2F;code&gt;, or in a terminal:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;opkg update
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Search for and install the &lt;code&gt;knot-resolver&lt;&#x2F;code&gt; package in LUCI, or:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;opkg install knot-resolver
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Stop and disable the service until the configuration is in place. In LUCI go to &lt;code&gt;System -&amp;gt; Startup&lt;&#x2F;code&gt; and stop and disable the &lt;code&gt;kresd&lt;&#x2F;code&gt; service, or:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;service kresd stop
+&lt;&#x2F;span&gt;&lt;span&gt;service kresd disable
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;configuration&quot;&gt;Configuration&lt;&#x2F;h2&gt;
+&lt;p&gt;First disable DNS on dnsmasq. In LUCI go to &lt;code&gt;Network -&amp;gt; DHCP and DNS -&amp;gt; Advanced Settings&lt;&#x2F;code&gt; and set the &lt;code&gt;DNS server port&lt;&#x2F;code&gt; to 0. Press &lt;code&gt;Save &amp;amp; Apply&lt;&#x2F;code&gt; and check that nothing is listening on port 53 anymore:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;netstat -tlnu
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Next create a &lt;code&gt;kresd&lt;&#x2F;code&gt; configuration file in &lt;code&gt;&#x2F;etc&#x2F;knot-resolver&#x2F;kresd.conf&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;log_target(&amp;#39;syslog&amp;#39;)
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;modules = {
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;#39;policy&amp;#39;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;#39;hints &amp;gt; iterate&amp;#39;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;#39;serve_stale &amp;lt; cache&amp;#39;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;#39;workarounds &amp;lt; iterate&amp;#39;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;#39;stats&amp;#39;,
+&lt;&#x2F;span&gt;&lt;span&gt;  &amp;#39;predict&amp;#39;
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;net.ipv6 = false
+&lt;&#x2F;span&gt;&lt;span&gt;net.listen(&amp;#39;127.0.0.1&amp;#39;, 53, { kind = &amp;#39;dns&amp;#39; })
+&lt;&#x2F;span&gt;&lt;span&gt;net.listen(&amp;#39;127.0.0.1&amp;#39;, 853, { kind = &amp;#39;tls&amp;#39; })
+&lt;&#x2F;span&gt;&lt;span&gt;net.listen(&amp;#39;10.0.0.1&amp;#39;, 53, { kind = &amp;#39;dns&amp;#39; })
+&lt;&#x2F;span&gt;&lt;span&gt;net.listen(&amp;#39;10.0.0.1&amp;#39;, 853, { kind = &amp;#39;tls&amp;#39; })
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;cache.open(50 * MB, &amp;#39;lmdb:&#x2F;&#x2F;&#x2F;tmp&#x2F;kresd&#x2F;cache&amp;#39;)
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;hints.add_hosts(&amp;#39;&#x2F;etc&#x2F;knot-resolver&#x2F;hosts.custom&amp;#39;)
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;policy.add(policy.all(policy.TLS_FORWARD({
+&lt;&#x2F;span&gt;&lt;span&gt;    { &amp;#39;1.1.1.1&amp;#39;, hostname=&amp;#39;cloudflare-dns.com&amp;#39; },
+&lt;&#x2F;span&gt;&lt;span&gt;    { &amp;#39;1.0.0.1&amp;#39;, hostname=&amp;#39;cloudflare-dns.com&amp;#39; }
+&lt;&#x2F;span&gt;&lt;span&gt;})))
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;predict.config({ window = 30, period = 48 })
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Let&#x27;s go through the settings. For details refer to &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;knot-resolver.readthedocs.io&#x2F;en&#x2F;stable&#x2F;&quot;&gt;the documentation&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;log_target(&#x27;syslog&#x27;)&lt;&#x2F;code&gt;: The default logging target is stdout, but I want messages to appear in the syslog together with the rest of the services.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;modules&lt;&#x2F;code&gt;: All the imported modules necessary to enable the settings used.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;net.ipv6 = false&lt;&#x2F;code&gt;: I don&#x27;t need IPv6 support and the default is true. Remove this if you need to add IPv6 addresses.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;net.listen(...)&lt;&#x2F;code&gt;: All the interfaces and ports to listen for DNS requests on. Replace the address with whatever the LAN address of your router is.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;cache.open(...)&lt;&#x2F;code&gt;: Use a relatively small cache on non-persistent storage. Best-practice is to mount a dedicated &lt;code&gt;tmpfs&lt;&#x2F;code&gt; if you want non-persistence, but since &lt;code&gt;&#x2F;tmp&lt;&#x2F;code&gt; is already mounted using &lt;code&gt;tmpfs&lt;&#x2F;code&gt; and has plenty of space I simply use that.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;hints.add_hosts(...)&lt;&#x2F;code&gt;: A regular hosts file with all the static mappings on the network. If your system uses &lt;code&gt;&#x2F;etc&#x2F;hosts&lt;&#x2F;code&gt; it could point to that. Delete this line if you don&#x27;t need static mappings.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;policy.TLS_FORWARD(...)&lt;&#x2F;code&gt;: This is where DNS forwarding using TLS is enabled for all lookups. The example uses Cloudflare servers but any DNS server supporting DoT can be used.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;predict.config(...)&lt;&#x2F;code&gt;: The prediction module is entirely optional. It refreshes cache entries based on usage patterns, time, or both depending on configuration.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;service-configuration-hack&quot;&gt;Service configuration hack&lt;&#x2F;h3&gt;
+&lt;p&gt;The &lt;code&gt;knot-resolver&lt;&#x2F;code&gt; package doesn&#x27;t integrate with &lt;code&gt;uci&lt;&#x2F;code&gt; and I didn&#x27;t have time to create a clean solution, so I just edited the &lt;code&gt;&#x2F;etc&#x2F;init.d&#x2F;kresd&lt;&#x2F;code&gt; script directly to use the custom configuration and disable the autogenerated configuration file:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Edit &lt;code&gt;CONFIGFILE&lt;&#x2F;code&gt; to point to &lt;code&gt;&#x2F;etc&#x2F;knot-resolver&#x2F;kresd.conf&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;Comment out &lt;code&gt;init_header&lt;&#x2F;code&gt;, &lt;code&gt;init_rootkey&lt;&#x2F;code&gt; and any &lt;code&gt;-a&lt;&#x2F;code&gt; parameter lines in the &lt;code&gt;start_service()&lt;&#x2F;code&gt; function.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Remember that if you upgrade the package you might have to reapply these changes.&lt;&#x2F;p&gt;
+&lt;p&gt;Now all that remains is to enable and start the service, and check that it is listening on all configured interfaces and ports:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;service kresd enable
+&lt;&#x2F;span&gt;&lt;span&gt;service kresd start
+&lt;&#x2F;span&gt;&lt;span&gt;netstat -tlnu
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Check that DNS works from a computer on the network:&lt;&#x2F;p&gt;
+&lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;dig example.com @10.0.0.1
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Since DNS is disabled in dnsmasq it doesn&#x27;t advertise any DNS server through DHCP anymore. Remedy that by adding a custom DHCP setting. In LUCI go to &lt;code&gt;Network -&amp;gt; Interfaces&lt;&#x2F;code&gt; and edit the interface for your LAN. Then go to &lt;code&gt;DHCP Server -&amp;gt; Advanced Settings&lt;&#x2F;code&gt; and add the option &lt;code&gt;6,10.0.0.1&lt;&#x2F;code&gt; to &lt;code&gt;DHCP-Options&lt;&#x2F;code&gt;. Save and apply and everything should work exactly as before, with all DNS lookups being encrypted and done by knot-resolver instead of dnsmasq.&lt;&#x2F;p&gt;
+&lt;p&gt;You can test if TLS is used here:&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;1.1.1.1&#x2F;help&#x2F;&quot;&gt;https:&#x2F;&#x2F;1.1.1.1&#x2F;help&#x2F;&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</content>
+	</entry>
 	<entry xml:lang="en">
 		<title>Reverse proxy on TrueNAS</title>
 		<published>2021-11-01T00:00:00+00:00</published>
@@ -147,7 +236,7 @@
 		<id>bjornruud.net/blog/2016/diy-nas/</id>
 		<content type="html">&lt;h1 id=&quot;diy-nas&quot;&gt;DIY NAS&lt;&#x2F;h1&gt;
 &lt;p&gt;The time has come to retire my &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;synology.com&quot;&gt;Synology&lt;&#x2F;a&gt; DS411slim NAS.&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;Synology_DS411slim.jpg&quot; alt=&quot;Synology DS411slim&quot; title=&quot;So long, and thanks for all the fish&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;Synology_DS411slim.jpg&quot; alt=&quot;Synology DS411slim&quot; title=&quot;So long, and thanks for all the fish&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;It is an excellent NAS box, tiny and silent and has plenty of features, but I find myself wanting more power, storage space and increased data safety.&lt;&#x2F;p&gt;
 &lt;p&gt;The more power requirement stems from a desire to run &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;plex.tv&quot;&gt;Plex Media Server&lt;&#x2F;a&gt; on the NAS, with enough power to transcode at least one stream in realtime from a 1080p source.&lt;&#x2F;p&gt;
 &lt;p&gt;Storage space has lately become an issue. The DS411slim has 4 2.5&amp;quot; drive bays, and max capacity of such drives are currently 2 TB which is far behind 3.5&amp;quot; drives. I want to put all my media on the NAS; DVDs, Blu-Rays, CDs, Photos and movie clips, in addition to TimeMachine backups and various files and disc images. I have calculated my storage requirements to be about 6 TB, a far cry from my current capacity which is 2 TB (4x1 TB in RAID10).&lt;&#x2F;p&gt;
@@ -159,40 +248,40 @@
 &lt;p&gt;FreeNAS is useless without hardware, so let&#x27;s have a look at the PC components I have selected.&lt;&#x2F;p&gt;
 &lt;h2 id=&quot;components&quot;&gt;Components&lt;&#x2F;h2&gt;
 &lt;p&gt;&lt;strong&gt;Case: &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;www.fractal-design.com&#x2F;home&#x2F;product&#x2F;cases&#x2F;node-series&#x2F;node-304-black&quot;&gt;Fractal Design Node 304&lt;&#x2F;a&gt;&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;Fractal_Design_Node_304-small.jpg&quot; alt=&quot;Fractal Design Node 304&quot; title=&quot;Fractal Design Node 304&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;Fractal_Design_Node_304-small.jpg&quot; alt=&quot;Fractal Design Node 304&quot; title=&quot;Fractal Design Node 304&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;Small, silent, good looking and has 6 3,5&amp;quot; drive bays. With todays drive capacities that should last a while. Despite the small size it has room for a full-sized ATX PSU.&lt;&#x2F;p&gt;
 &lt;p&gt;&lt;strong&gt;PSU: &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;www.fractal-design.com&#x2F;home&#x2F;product&#x2F;power-supplies&#x2F;integra-m&#x2F;integra-m-450w&quot;&gt;Fractal Design Integra M 450W&lt;&#x2F;a&gt;&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;Fractal_Design_Integra_M_450W-small.jpg&quot; alt=&quot;Fractal Design Integra M 450W&quot; title=&quot;Fractal Design Integra M 450W&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;Fractal_Design_Integra_M_450W-small.jpg&quot; alt=&quot;Fractal Design Integra M 450W&quot; title=&quot;Fractal Design Integra M 450W&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;Since this will be a low-power mini-ITX build it will have very modest power requirements. It&#x27;s more important that the PSU is stable, efficient and silent. This PSU is modular, which is a bonus when trying to fit everything in a small case.&lt;&#x2F;p&gt;
 &lt;p&gt;&lt;strong&gt;Motherboard: &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;www.asrockrack.com&#x2F;general&#x2F;productdetail.asp?Model=E3C226D2I#Specifications&quot;&gt;ASRock E3C226D2I&lt;&#x2F;a&gt;&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;ASRock_E3C226D2I-small.jpg&quot; alt=&quot;ASRock E3C226D2I&quot; title=&quot;ASRock E3C226D2I&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;ASRock_E3C226D2I-small.jpg&quot; alt=&quot;ASRock E3C226D2I&quot; title=&quot;ASRock E3C226D2I&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;This board has everything I need: ECC RAM support, 6 SATA3 ports, USB 3, Intel NICs, and is compatible with Intel Core i3 T-series CPUs. I thought about going for a bleeding edge Intel Skylake compatible motherboard, but for the time being finding one with the required specifications isn&#x27;t easy. I don&#x27;t really need the slight boost in performance and there are benefits with technology that is a generation or two behind. Hardware bugs have likely been found and fixed in newer revisions and firmwares, and drivers have been updated and optimized. The price is also lower.&lt;&#x2F;p&gt;
 &lt;p&gt;&lt;strong&gt;CPU: &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;ark.intel.com&#x2F;products&#x2F;77481&#x2F;Intel-Core-i3-4130T-Processor-3M-Cache-2_90-GHz&quot;&gt;Intel Core i3 4130T&lt;&#x2F;a&gt;&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;A Core i3 has more than enough power for a NAS, but most important of all the Haswell (and newer) i3 CPUs share a feature with Xeons: ECC RAM support. This is a T-series model with a TDP of only 35W. Less heat means less need for cooling which means less noise. Will this CPU be enough to transcode 1080p Blu-Ray source material? According to benchmarks it should be. We&#x27;ll see.&lt;&#x2F;p&gt;
 &lt;p&gt;&lt;strong&gt;Memory: &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;www.kingston.com&#x2F;dataSheets&#x2F;KVR16E11_8HB.pdf&quot;&gt;Kingston ValueRAM Server Premier 8GB 1600MHz DDR3 ECC&lt;&#x2F;a&gt;&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;Not much to say. Cheap unbuffered ECC RAM targeted for server use. The motherboard only supports 16 GB max, so I bought two. For a NAS RAM is important, especially when using ZFS. Always buy as much RAM as you can afford (within reason).&lt;&#x2F;p&gt;
 &lt;p&gt;&lt;strong&gt;USB flash drive: &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;https:&#x2F;&#x2F;www.sandisk.com&#x2F;home&#x2F;usb-flash&#x2F;extreme-usb&quot;&gt;SanDisk Extreme Pro 16GB USB 3.0&lt;&#x2F;a&gt;&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;Sandisk_Extreme_Pro_16GB.png&quot; alt=&quot;SanDisk Extreme Pro 16GB&quot; title=&quot;SanDisk Extreme Pro 16GB&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;Sandisk_Extreme_Pro_16GB.png&quot; alt=&quot;SanDisk Extreme Pro 16GB&quot; title=&quot;SanDisk Extreme Pro 16GB&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;FreeNAS is usually installed to and run from a USB flash drive. I opted for one with high read&#x2F;write speeds, but have no idea what kind of longevity I can expect from it. The system drive isn&#x27;t a critical component in this build, so if it breaks it&#x27;s easy and quick to do a new FreeNAS install on another flash drive and import the previous configuration.&lt;&#x2F;p&gt;
 &lt;p&gt;&lt;strong&gt;HDD: &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;www.wdc.com&#x2F;en&#x2F;products&#x2F;products.aspx?id=810&quot;&gt;Western Digital Red SOHO NAS 6 TB&lt;&#x2F;a&gt;&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;My planned drive configuration is to use a zpool of mirrors. I ordered 4x6 TB for now and can add one more mirror to the pool when I need more space. When all drive bays are full I can upgrade the mirrors with larger capacity drives. Upgrading this way is not optimal for performance, but it is flexible, has a low up-front cost, and for my use case it should suffice.&lt;&#x2F;p&gt;
 &lt;h2 id=&quot;the-build&quot;&gt;The Build&lt;&#x2F;h2&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_packages-small.jpg&quot; alt=&quot;All packages&quot; title=&quot;If you build it they will come&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;nas_packages-small.jpg&quot; alt=&quot;All packages&quot; title=&quot;If you build it they will come&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;Exciting!&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_node_304-small.jpg&quot; alt=&quot;Node Case&quot; title=&quot;Wazzup?&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;nas_node_304-small.jpg&quot; alt=&quot;Node Case&quot; title=&quot;Wazzup?&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;The Node 304 is a good looking case that can easily be placed in the living room. The fans are quiet and the case comes with a built-in fan voltage regulator. I have noticed that the smaller front fans have trouble starting if the system is powered on with the regulator set to 5V, so I always use 12V when powering on, and then adjust the voltage down.&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_case_side-small.jpg&quot; alt=&quot;Case Opened Side&quot; title=&quot;Case opened side&quot; &#x2F;&gt;
-&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_case_top-small.jpg&quot; alt=&quot;Case Opened Top&quot; title=&quot;Case opened top&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;nas_case_side-small.jpg&quot; alt=&quot;Case Opened Side&quot; title=&quot;Case opened side&quot; &#x2F;&gt;
+&lt;img src=&quot;nas_case_top-small.jpg&quot; alt=&quot;Case Opened Top&quot; title=&quot;Case opened top&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;It&#x27;ll be a tight fit, but there should be room for everything and still have good airflow.&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_case_top_mb-small.jpg&quot; alt=&quot;Case With Motherboard&quot; title=&quot;Motherboard in place&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;nas_case_top_mb-small.jpg&quot; alt=&quot;Case With Motherboard&quot; title=&quot;Motherboard in place&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;No problem fitting the motherboard. Remember to mount the backplate first, or you&#x27;ll have to remove the motherboard to mount it (yes, I forgot to do that).&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_case_top_psu-small.jpg&quot; alt=&quot;Case With PSU&quot; title=&quot;PSU in place&quot; &#x2F;&gt;
-&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_case_mb_psu_side-small.jpg&quot; alt=&quot;Case With PSU Side&quot; title=&quot;PSU from side&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;nas_case_top_psu-small.jpg&quot; alt=&quot;Case With PSU&quot; title=&quot;PSU in place&quot; &#x2F;&gt;
+&lt;img src=&quot;nas_case_mb_psu_side-small.jpg&quot; alt=&quot;Case With PSU Side&quot; title=&quot;PSU from side&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;PSU fits nicely too. The case supports full-size ATX PSUs, but it will be a tight fith with the bigger ones, especially of the non-modular variety.&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_case_top_hdd_bay-small.jpg&quot; alt=&quot;Case With HDD&quot; title=&quot;HDD pair mounted&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;nas_case_top_hdd_bay-small.jpg&quot; alt=&quot;Case With HDD&quot; title=&quot;HDD pair mounted&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;One disk pair mounted. Cables need cleanup.&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_case_final_side_2-small.jpg&quot; alt=&quot;Case Final 2&quot; title=&quot;Final case 2&quot; &#x2F;&gt;
-&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2016&#x2F;diy-nas&#x2F;nas_case_final_side_1-small.jpg&quot; alt=&quot;Case Final 1&quot; title=&quot;Final case 1&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;nas_case_final_side_2-small.jpg&quot; alt=&quot;Case Final 2&quot; title=&quot;Final case 2&quot; &#x2F;&gt;
+&lt;img src=&quot;nas_case_final_side_1-small.jpg&quot; alt=&quot;Case Final 1&quot; title=&quot;Final case 1&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;Voila! Here is the result. As you can see getting the cables out of the way is a challenge in such a small case, but doable. The SATA and HDD power cables are bunted together behind the drive bays. The rest are run along the side to the PSU area. It looks a bit messy on the images, but there is plenty of room above the motherboard and airflow is good.&lt;&#x2F;p&gt;
 &lt;h2 id=&quot;testing-and-results&quot;&gt;Testing and Results&lt;&#x2F;h2&gt;
 &lt;p&gt;Testing the hardware before use is essential, but I&#x27;m not going to write about that since Jeff Atwood over at &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;blog.codinghorror.com&#x2F;&quot;&gt;Coding Horror&lt;&#x2F;a&gt; recently wrote &lt;a rel=&quot;noopener&quot; target=&quot;_blank&quot; href=&quot;http:&#x2F;&#x2F;blog.codinghorror.com&#x2F;is-your-computer-stable&#x2F;&quot;&gt;an article&lt;&#x2F;a&gt; about it. Read it and do it.&lt;&#x2F;p&gt;
@@ -752,7 +841,7 @@ The installation method described in this post doesn&#x27;t work with OS X 10.9 
 &lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#608b4e;&quot;&gt;# Is this necessary?&lt;&#x2F;span&gt;&lt;span style=&quot;color:#608b4e;&quot;&gt;
 &lt;&#x2F;span&gt;&lt;span&gt;    user_autocreate = &lt;&#x2F;span&gt;&lt;span style=&quot;color:#569cd6;&quot;&gt;True&lt;&#x2F;span&gt;&lt;span&gt;
 &lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
-&lt;p&gt;&lt;a href=&quot;bjornruud.net&#x2F;blog&#x2F;2009&#x2F;authorize-moinmoin-users-with-wordpress-db&#x2F;wikiconfig-wordpress-auth.zip&quot;&gt;Download example wikiconfig.py&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;wikiconfig-wordpress-auth.zip&quot;&gt;Download example wikiconfig.py&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;The authorization plugins included with MoinMoin are good examples of what you can do, so study them if you want to customize something or write your own.&lt;&#x2F;p&gt;
 &lt;p&gt;If we wanted a single sign-on solution we would probably have to use the WordPress cookie in the authentication process. For security we should then store the WordPress session ID in the database and authenticate by comparing that with the session ID in the cookie.&lt;&#x2F;p&gt;
 </content>
@@ -811,7 +900,7 @@ The installation method described in this post doesn&#x27;t work with OS X 10.9 
 &lt;h2 id=&quot;configuration&quot;&gt;Configuration&lt;&#x2F;h2&gt;
 &lt;p&gt;&lt;em&gt;Tip:&lt;&#x2F;em&gt; On Linux the &lt;code&gt;ip_gre&lt;&#x2F;code&gt; module is needed. Add it to &lt;code&gt;&#x2F;etc&#x2F;modules&lt;&#x2F;code&gt; to load it at boot time.&lt;&#x2F;p&gt;
 &lt;p&gt;Consider a scenario where we have two networks, &lt;code&gt;Site1&lt;&#x2F;code&gt; and &lt;code&gt;Site2&lt;&#x2F;code&gt;, and both are connected to the internet. The network owners want to send multicast traffic between the two networks, which is not supported by the network between them.&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2009&#x2F;gre-tunnel-with-multicast-support&#x2F;gre-sites.png&quot; alt=&quot;Example GRE sites&quot; title=&quot;gre-sites&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;gre-sites.png&quot; alt=&quot;Example GRE sites&quot; title=&quot;gre-sites&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;The site networks have the following configuration:&lt;&#x2F;p&gt;
 &lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;Site1&lt;&#x2F;span&gt;&lt;span&gt;
 &lt;&#x2F;span&gt;&lt;span&gt;network 10.0.1.0&lt;&#x2F;span&gt;&lt;span&gt;
@@ -840,7 +929,7 @@ The installation method described in this post doesn&#x27;t work with OS X 10.9 
 &lt;&#x2F;span&gt;&lt;span&gt;ip addr add 10.10.0.2&#x2F;30 broadcast 10.10.0.3 dev gre-site1&lt;&#x2F;span&gt;&lt;span&gt;
 &lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
 &lt;p&gt;The tunnel should now be functional. Try to ping the endpoint addresses from the routers. If there is no contact, see if the routing table contains the correct entry for the &lt;code&gt;10.10.0.0&#x2F;30&lt;&#x2F;code&gt; network.&lt;&#x2F;p&gt;
-&lt;p&gt;&lt;img src=&quot;bjornruud.net&#x2F;blog&#x2F;2009&#x2F;gre-tunnel-with-multicast-support&#x2F;gre-sites-tunnel.png&quot; alt=&quot;GRE tunnel diagram&quot; title=&quot;gre-sites-tunnel&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;img src=&quot;gre-sites-tunnel.png&quot; alt=&quot;GRE tunnel diagram&quot; title=&quot;gre-sites-tunnel&quot; &#x2F;&gt;&lt;&#x2F;p&gt;
 &lt;p&gt;To get traffic through the tunnel you must define a route to the appropriate network. To get traffic from &lt;code&gt;Site1&lt;&#x2F;code&gt; to &lt;code&gt;Site2&lt;&#x2F;code&gt;, &lt;code&gt;Site1&lt;&#x2F;code&gt; must know that the &lt;code&gt;Site2&lt;&#x2F;code&gt; network is accessed through the tunnel:&lt;&#x2F;p&gt;
 &lt;pre style=&quot;background-color:#1e1e1e;color:#dcdcdc;&quot;&gt;&lt;code&gt;&lt;span&gt;ip route add 10.0.2.0&#x2F;24 via 10.10.0.2&lt;&#x2F;span&gt;&lt;span&gt;
 &lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;

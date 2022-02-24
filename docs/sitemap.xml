@@ -68,6 +68,13 @@
         <lastmod>2021-11-01</lastmod>
     </url>
     <url>
+        <loc>bjornruud.net/blog/2022/</loc>
+    </url>
+    <url>
+        <loc>bjornruud.net/blog/2022/replacing-dnsmasq-dns-with-knot-resolver-on-openwrt/</loc>
+        <lastmod>2022-02-24</lastmod>
+    </url>
+    <url>
         <loc>bjornruud.net/blog/archive/</loc>
     </url>
 </urlset>

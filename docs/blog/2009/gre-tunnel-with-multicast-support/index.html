@@ -48,7 +48,7 @@
 <h2 id="configuration">Configuration</h2>
 <p><em>Tip:</em> On Linux the <code>ip_gre</code> module is needed. Add it to <code>/etc/modules</code> to load it at boot time.</p>
 <p>Consider a scenario where we have two networks, <code>Site1</code> and <code>Site2</code>, and both are connected to the internet. The network owners want to send multicast traffic between the two networks, which is not supported by the network between them.</p>
-<p><img src="bjornruud.net/blog/2009/gre-tunnel-with-multicast-support/gre-sites.png" alt="Example GRE sites" title="gre-sites" /></p>
+<p><img src="gre-sites.png" alt="Example GRE sites" title="gre-sites" /></p>
 <p>The site networks have the following configuration:</p>
 <pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>Site1</span><span>
 </span><span>network 10.0.1.0</span><span>
@@ -77,7 +77,7 @@
 </span><span>ip addr add 10.10.0.2/30 broadcast 10.10.0.3 dev gre-site1</span><span>
 </span></code></pre>
 <p>The tunnel should now be functional. Try to ping the endpoint addresses from the routers. If there is no contact, see if the routing table contains the correct entry for the <code>10.10.0.0/30</code> network.</p>
-<p><img src="bjornruud.net/blog/2009/gre-tunnel-with-multicast-support/gre-sites-tunnel.png" alt="GRE tunnel diagram" title="gre-sites-tunnel" /></p>
+<p><img src="gre-sites-tunnel.png" alt="GRE tunnel diagram" title="gre-sites-tunnel" /></p>
 <p>To get traffic through the tunnel you must define a route to the appropriate network. To get traffic from <code>Site1</code> to <code>Site2</code>, <code>Site1</code> must know that the <code>Site2</code> network is accessed through the tunnel:</p>
 <pre style="background-color:#1e1e1e;color:#dcdcdc;"><code><span>ip route add 10.0.2.0/24 via 10.10.0.2</span><span>
 </span></code></pre>
@@ -178,7 +178,7 @@
     <div class="footer-container">
       <div class="footer">
         
-        Bjørn Olav Ruud &copy; 2021<br/>
+        Bjørn Olav Ruud &copy; 2022<br/>
 <a href="https://github.com/BjornRuud">GitHub</a> | <a href="https://www.linkedin.com/in/bjornruud/">LinkedIn</a> | <a href="https://twitter.com/BjornRuud">Twitter</a><br/>
 Built with <a href="https://www.getzola.org" target="_blank">Zola</a>
 
